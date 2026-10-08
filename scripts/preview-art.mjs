@@ -61,6 +61,7 @@ try {
   const sprites = await load('/src/art/sprites.ts');
   const { rasterizeFont } = await load('/src/art/font.ts');
   const { renderTerrain } = await load('/src/art/terrainRender.ts');
+  const { renderExplosion } = await load('/src/art/explosions.ts');
   const { TileTerrain } = await load('/src/sim/terrain.ts');
   const { TEST_MAP } = await load('/src/stages/testMap.ts');
 
@@ -72,6 +73,10 @@ try {
   write('player_tank_belly.png', rasterize(sprites.PLAYER_TANK_BELLY), 8);
   write('life_icon.png', rasterize(sprites.LIFE_ICON), 8);
   write('font.png', rasterizeFont(), 4);
+  write('shot.png', rasterize(sprites.SHOT), 8);
+  write('nuke_shell.png', rasterize(sprites.NUKE_SHELL), 8);
+  write('explosion_small.png', renderExplosion(12, 5, 3), 6);
+  write('explosion_big.png', renderExplosion(56, 10, 5), 3);
   const t0 = performance.now();
   write('terrain_test_map.png', renderTerrain(new TileTerrain(TEST_MAP, 16, 1)), 2);
   console.log(`terrain rendered in ${Math.round(performance.now() - t0)} ms`);

@@ -31,7 +31,7 @@ export class HudScene extends Phaser.Scene {
 
     for (let i = 0; i < MAX_LIFE_ICONS; i++) this.lifeIcons.push(this.add.image(9 + i * 9, 277, 'lifeIcon'));
 
-    this.debug = this.add.bitmapText(220, 246, FONT_KEY, '').setOrigin(1, 0).setTint(0x9cf0c0).setDropShadow(1, 1, 0x000000, 1);
+    this.debug = this.add.bitmapText(220, 238, FONT_KEY, '').setOrigin(1, 0).setTint(0x9cf0c0).setDropShadow(1, 1, 0x000000, 1);
   }
 
   update(): void {
@@ -44,7 +44,8 @@ export class HudScene extends Phaser.Scene {
     this.debug.setVisible(s.showDebug);
     if (s.showDebug) {
       const d = s.debug;
-      this.debug.setText(`L ${d.left.toUpperCase()} R ${d.right.toUpperCase()}\n${d.maneuver.toUpperCase()}\n${d.mode.toUpperCase()}`);
+      const nuke = d.nukeCooldown > 0 ? `NUKE ${d.nukeCooldown.toFixed(1)}` : 'NUKE OK';
+      this.debug.setText(`L ${d.left.toUpperCase()} R ${d.right.toUpperCase()}\n${d.maneuver.toUpperCase()}\n${d.mode.toUpperCase()}\n${nuke}`);
     }
   }
 }

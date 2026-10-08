@@ -37,6 +37,17 @@ try {
   await page.waitForTimeout(300);
   await shot('01-start');
   const start = await tank();
+  const weapons = () => page.evaluate(() => ({ shots: window.__assault.weapons.shots.length, nukes: window.__assault.weapons.nukes.length, cooldown: window.__assault.weapons.nukeCooldown }));
+  const blastKinds = () => page.evaluate(() => window.__assault.blasts.map((b) => b.kind));
+
+  // Facing the cliffs around the void island: shots fly up and burst on the rock.
+  for (let i = 0; i < 5; i++) await page.keyboard.press('Space');
+  const salvo = await weapons();
+  check(salvo.shots === 3, `rapid fire is capped at three shots on screen (${salvo.shots})`);
+  await page.waitForTimeout(60);
+  await shot('01b-shots');
+  await page.waitForTimeout(700);
+  check((await blastKinds()).includes('shot'), 'shots burst against the cliff');
 
   await hold(['KeyW', 'KeyI'], 1200);
   await release(['KeyW', 'KeyI']);
@@ -74,6 +85,19 @@ try {
   const afterRoll = await tank();
   const moved = Math.hypot(afterRoll.x - beforeRoll.x, afterRoll.y - beforeRoll.y);
   check(moved > 15 && afterRoll.heading === beforeRoll.heading, `roll moves sideways without turning (${moved.toFixed(1)} px)`);
+
+  await hold(['KeyA', 'KeyL'], 300);
+  await page.keyboard.press('Space');
+  await page.keyboard.press('Space');
+  const launched = await weapons();
+  check(launched.nukes === 1, `fire during a wheelie launches one nuke (${launched.nukes})`);
+  check(launched.cooldown > 2, `a second nuke is refused while recharging (cooldown ${launched.cooldown.toFixed(2)} s)`);
+  await page.waitForTimeout(400);
+  await shot('06-nuke-in-flight');
+  await page.waitForTimeout(600);
+  await shot('07-nuke-blast');
+  await release(['KeyA', 'KeyL']);
+  check((await blastKinds()).includes('nuke'), 'the nuke explodes where it lands');
 
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {

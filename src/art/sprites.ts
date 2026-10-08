@@ -72,3 +72,26 @@ export const LIFE_ICON: PixelArt = {
     'bkkkkkb',
   ],
 };
+
+const PROJECTILE_PALETTE: Record<string, number> = {
+  k: 0x18181f,
+  W: 0xffffe8,
+  y: 0xffe060,
+  o: 0xff9020,
+  r: 0xd03018,
+  g: 0x9a9aa8,
+  G: 0x5a5a66,
+  C: 0xd9d6b5,
+};
+
+/** Regular cannon shot, flying up. */
+export const SHOT: PixelArt = {
+  palette: PROJECTILE_PALETTE,
+  rows: ['.y.', 'yWy', 'yWy', '.o.', '.o.', '.r.'],
+};
+
+/** Artillery shell lobbed from a wheelie, flying up. */
+export const NUKE_SHELL: PixelArt = {
+  palette: PROJECTILE_PALETTE,
+  rows: ['..W..', '.WCW.', '.CWC.', 'kgCgk', 'kgCgk', 'kGrGk', 'kGrGk', '.kyk.', '.yoy.', '..r..'],
+};

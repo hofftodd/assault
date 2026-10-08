@@ -35,17 +35,21 @@ The original cabinet had two 4-way levers, one per hand. Here the left lever is
 | ↑ | ↓ | W + K | Turn right |
 | ← | ← | A + J | Roll left (flip over sideways) |
 | → | → | D + L | Roll right |
-| ← | → | A + L | Wheelie (stops; fires nukes in a later milestone) |
+| ← | → | A + L | Wheelie (stops and rears up; fire launches a nuke) |
 
-**Space** fires (coming in milestone 2). In dev builds, **`** (backquote)
-toggles a lever/maneuver readout.
+**Space** fires: tap or hold. At most three shots can be on screen, and they
+burst against cliffs. You can fire while rolling. During a wheelie, fire lobs a
+nuke over obstacles that explodes about 120 px ahead; it then needs 2.5 s to
+recharge. **M** mutes the sound. In dev builds, **`** (backquote) toggles a
+readout of the levers, the current move and the nuke recharge.
 
 ## Layout
 
 ```
 src/input/     lever + maneuver logic (pure) and keyboard adapter
-src/sim/       tank movement, terrain and collision (pure, unit-tested)
-src/art/       palette, pixel-art sprites, pixel font, procedural terrain renderer
+src/sim/       tank movement, weapons, terrain and collision (pure, unit-tested)
+src/art/       palette, pixel-art sprites, pixel font, terrain and explosion renderers
+src/audio/     synthesised retro sound effects (Web Audio, no sample files)
 src/scenes/    Phaser scenes: boot (textures), game (world + rotating camera), HUD
 src/stages/    map data
 tests/         Vitest unit tests
@@ -55,7 +59,8 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
 
 ## Status
 
-Milestone 1 is done: the two-lever controls, and the tank driving, turning,
-rolling and wheelieing on a test map while the world rotates around it.
-Next is weapons (regular shots, wheelie nukes), then enemies, then a faithful
-stage 1.
+- **Milestone 1 (done):** the two-lever controls, and the tank driving,
+  turning, rolling and wheelieing on a test map while the world rotates around it.
+- **Milestone 2 (done):** regular shots (three on screen at most), wheelie
+  nukes with arc, blast radius and recharge, explosions, and sound effects.
+- **Next:** enemies, damage, lives and score; then a faithful stage 1.

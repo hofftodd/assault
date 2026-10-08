@@ -14,6 +14,20 @@ export function addRgbaTexture(scene: Phaser.Scene, key: string, img: Rgba): voi
   tex.refresh();
 }
 
+/** Upload a horizontal strip of square frames and register it as an animation of the same key. */
+export function addAnimationStrip(scene: Phaser.Scene, key: string, img: Rgba, frameRate: number): void {
+  addRgbaTexture(scene, key, img);
+  const size = img.height;
+  const count = img.width / size;
+  const tex = scene.textures.get(key);
+  for (let i = 0; i < count; i++) tex.add(i, 0, i * size, 0, size, size);
+  scene.anims.create({
+    key,
+    frames: Array.from({ length: count }, (_, i) => ({ key, frame: i })),
+    frameRate,
+  });
+}
+
 export function addPixelArt(scene: Phaser.Scene, key: string, art: PixelArt): void {
   addRgbaTexture(scene, key, rasterize(art));
 }

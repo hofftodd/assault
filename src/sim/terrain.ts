@@ -96,4 +96,9 @@ export class TileTerrain implements Terrain {
   speedAt(x: number, y: number): number {
     return this.materialAt(x, y) === Material.Rough ? ROUGH_SPEED : 1;
   }
+
+  /** Cliffs stop shots; they fly on over open ground and the void. */
+  blocksShotsAt(x: number, y: number): boolean {
+    return this.materialAt(x, y) === Material.Rock;
+  }
 }

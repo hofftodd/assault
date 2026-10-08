@@ -7,7 +7,7 @@ export interface Session {
   topScore: number;
   lives: number;
   showDebug: boolean;
-  debug: { left: Dir; right: Dir; maneuver: Maneuver; mode: TankMode };
+  debug: { left: Dir; right: Dir; maneuver: Maneuver; mode: TankMode; nukeCooldown: number };
 }
 
 export const SESSION_KEY = 'session';
@@ -18,6 +18,6 @@ export function createSession(): Session {
     topScore: 30000,
     lives: 3,
     showDebug: import.meta.env.DEV,
-    debug: { left: 'none', right: 'none', maneuver: 'idle', mode: 'drive' },
+    debug: { left: 'none', right: 'none', maneuver: 'idle', mode: 'drive', nukeCooldown: 0 },
   };
 }

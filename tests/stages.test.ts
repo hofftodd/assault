@@ -29,6 +29,19 @@ describe.each(STAGES.map((s) => [s.number, s] as const))('stage %i', (_n, stage)
   });
 });
 
+describe('stage 1 follows the walkthrough', () => {
+  const s1 = STAGES[0];
+  const count = (kind: string) => (s1.spawns ?? []).filter((s) => s.kind === kind).length;
+  it('has 43 Type 1s, 12 Type 2s, a Type 5 and 2+3 pillboxes over 2:15', () => {
+    expect(s1.timeLimit).toBe(135);
+    expect(count('type1')).toBe(43);
+    expect(count('type2')).toBe(12);
+    expect(count('type5')).toBe(1);
+    expect(count('torchika1')).toBe(2);
+    expect(count('torchika2')).toBe(3);
+  });
+});
+
 describe('stage 2 follows the walkthrough', () => {
   const s2 = STAGES[1];
   const count = (kind: string) => (s2.spawns ?? []).filter((s) => s.kind === kind).length;

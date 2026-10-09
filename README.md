@@ -90,8 +90,9 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   and award its points. Nukes damage everything in the blast. Wrecked tanks
   leave craters that slow you. One hit kills you ("YOU WERE HIT"); you get
   three lives, an extra life at 20,000 points, and a fresh game after GAME OVER.
-- **Milestone 4 (done):** stage 1, "Progress Planetary Circumstances", built from
-  the StrategyWiki walkthrough. It has the bends of light tanks, the 8-way pillbox
+- **Milestone 4 (done):** stage 1, "Progress Planetary Circumstances". The
+  F-shaped terrain is converted from StrategyWiki's map of the original, and the
+  waves follow its walkthrough. It has the bends of light tanks, the 8-way pillbox
   and jump zone, the big field of tanks, the pillbox run, and two cannons guarding
   the base. Also included:
   - PLAYER 1 READY, a 2:15 clock that shows under 100 s and flashes red, and TIME UP.

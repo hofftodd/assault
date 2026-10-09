@@ -3,3 +3,4 @@ dist/
 *.log
 .vite/
 smoke-output/
+music-preview/

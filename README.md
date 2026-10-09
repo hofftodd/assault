@@ -82,7 +82,8 @@ shots can be on screen, and they burst against cliffs. You can fire while
 rolling. During a wheelie a crosshair slides out from the tank, white while
 extending and red at full range (120 px). Fire lobs a nuke over obstacles to
 wherever the crosshair is, so fire early for a short lob. The nuke then needs
-2.5 s to recharge. **M** mutes the sound. In dev builds, **`** (backquote)
+2.5 s to recharge. **M** mutes the sound. **Q** twice (within 2 s) quits the
+game: back to the title, or to name entry if the score makes the table. In dev builds, **`** (backquote)
 toggles a readout of the levers, the current move and the nuke recharge.
 
 **Enter**, **1**, **Space** or a click starts a game from the title screen. URL

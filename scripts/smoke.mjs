@@ -267,6 +267,14 @@ async function controls(t) {
   await t.page.keyboard.down('ArrowRight');
   await t.check('a double tap of the right arrow rolls', await t.until(() => window.__assault.tank.mode === 'roll', undefined, 2));
   await t.page.keyboard.up('ArrowRight');
+
+  // Q asks for a second press, then quits to the title screen.
+  await t.page.keyboard.press('KeyQ');
+  await t.sim(0.1);
+  await t.check('one press of Q only asks to confirm', (await t.eval(() => window.__assault.scene)) === 'game');
+  await t.shot('07b-quit-confirm');
+  await t.page.keyboard.press('KeyQ');
+  await t.check('a second press of Q quits to the title screen', await t.until(() => window.__assault.scene === 'title', undefined, 5));
 }
 
 /** Combat on the proving ground: shooting, being shot, game over. */

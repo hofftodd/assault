@@ -65,6 +65,8 @@ const FINALE: { hold: number; text: string }[] = [
   },
   { hold: 6, text: "A FAN REMAKE OF\n\nNAMCO'S 1988 ASSAULT\n\n\n\nTHE END\n\n\nMANY THANKS\n\nFOR YOUR PLAY!" },
 ];
+/** Seconds a first press of Q waits for the second that confirms quitting. */
+const QUIT_CONFIRM = 2;
 /** Camera zoom while raised on a jump zone. */
 const RAISED_ZOOM = 0.55;
 
@@ -132,6 +134,8 @@ export class GameScene extends Phaser.Scene {
   private acc = 0;
   /** The world state the soundtrack last reacted to. */
   private musicState: WorldState | null = null;
+  /** Until when (scene time, ms) a second press of Q quits the game. */
+  private quitArmedUntil = 0;
 
   constructor() {
     super('game');
@@ -151,6 +155,7 @@ export class GameScene extends Phaser.Scene {
     this.leaving = false;
     this.acc = 0;
     this.musicState = null;
+    this.quitArmedUntil = 0;
 
     // ?map=test plays the proving ground; ?peaceful removes the enemies.
     const params = new URLSearchParams(window.location.search);
@@ -351,6 +356,7 @@ export class GameScene extends Phaser.Scene {
       default:
         s.message = null;
     }
+    if (this.time.now < this.quitArmedUntil) s.message = 'PRESS Q AGAIN\n\nTO QUIT';
 
     // The clock appears under 100 seconds; it flashes red at 60 and 30 and stays red for the last 10.
     const t = w.timeLeft;
@@ -724,5 +730,22 @@ export class GameScene extends Phaser.Scene {
   private onKey = (e: KeyboardEvent): void => {
     if (e.code === 'Backquote') this.session.showDebug = !this.session.showDebug;
     if (e.code === 'KeyM') this.sfx.toggleMute();
+    if (e.code === 'KeyQ' && !e.repeat) this.quitPressed();
   };
+
+  /**
+   * Q quits the game, after a second press to confirm (Q sits next to the levers'
+   * W and A, so a stray press shouldn't end a run). A score that makes the table
+   * still goes to name entry, as after GAME OVER.
+   */
+  private quitPressed(): void {
+    if (this.leaving) return;
+    if (this.time.now < this.quitArmedUntil) {
+      this.sfx.music(null);
+      this.finishGame();
+      return;
+    }
+    this.quitArmedUntil = this.time.now + QUIT_CONFIRM * 1000;
+    this.sfx.play('tick');
+  }
 }

@@ -91,7 +91,7 @@ export class TitleScene extends Phaser.Scene {
         ['LEFT+RIGHT', 'WHEELIE, AIM NUKE'],
         ['TAP TAP L/R', 'ROLL SIDEWAYS'],
         ['SPACE', 'FIRE'],
-        ['M', 'SOUND ON / OFF'],
+        ['M / QQ', 'SOUND / QUIT GAME'],
       ]),
       text(112, 170, 'ARCADE TWIN LEVERS', HUD_WHITE),
       ...rows(186, [

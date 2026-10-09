@@ -1,0 +1,79 @@
+"""Convert a StrategyWiki stage map image into tile-map rows (legend in src/sim/terrain.ts).
+
+    python3 scripts/convert-map.py reference/maps/stage02.png X0 Y0 X1 Y1 CELL > rows.txt
+
+Each CELL x CELL block of the cropped image becomes one tile, classified by the
+majority colour: black = void, grey = cliff, olive = ground, speckled grey on
+olive = rough, teal = water, dark green = crops, blue-grey = concrete.
+Markers (jump zones, enemies, the hatch) are placed separately in stages.ts.
+"""
+import sys
+from collections import Counter
+from PIL import Image
+
+
+def pixel_class(r, g, b):
+    if max(r, g, b) < 25:
+        return ' '
+    if g - r > 50:
+        return '~'
+    if b - r > 12 and b > 80:
+        return '='
+    if g > r + 3:
+        return 'f'
+    if r >= 70 and b < 35 and 3 <= r - g <= 22:
+        return '.'
+    if r > 80 and b >= 35 and r - b >= 8:
+        return ','
+    return '#'
+
+
+def main():
+    path, x0, y0, x1, y1, cell = sys.argv[1], *map(int, sys.argv[2:7])
+    im = Image.open(path).convert('RGB')
+    px = im.load()
+    rows = []
+    for ty in range((y1 - y0) // cell):
+        row = []
+        for tx in range((x1 - x0) // cell):
+            counts = Counter(
+                pixel_class(*px[x0 + tx * cell + dx, y0 + ty * cell + dy]) for dy in range(cell) for dx in range(cell)
+            )
+            ch, n = counts.most_common(1)[0]
+            total = cell * cell
+            # Speckled rough ground: olive with plenty of grey flecks.
+            if ch in '.,' and counts[','] >= total * 0.2 and counts['.'] + counts[','] >= total * 0.7:
+                ch = ','
+            elif ch == ',':
+                ch = '.'
+            row.append(ch)
+        rows.append(row)
+    print('\n'.join(''.join(r) for r in cleanup(rows)))
+
+
+def cleanup(g):
+    """Tidy classification noise: moss on cliff edges, lone bushes, specks of rock."""
+    h, w = len(g), len(g[0])
+
+    def around(x, y, ch):
+        return sum(
+            1
+            for dy in (-1, 0, 1)
+            for dx in (-1, 0, 1)
+            if (dx or dy) and 0 <= y + dy < h and 0 <= x + dx < w and g[y + dy][x + dx] == ch
+        )
+
+    out = [row[:] for row in g]
+    for y in range(h):
+        for x in range(w):
+            c = g[y][x]
+            if c == 'f' and around(x, y, '#') + around(x, y, ' ') >= 3:
+                out[y][x] = '#'  # moss along a cliff edge
+            elif c == 'f' and around(x, y, 'f') <= 1:
+                out[y][x] = 'b'  # a lone bush
+            elif c == '#' and around(x, y, '#') + around(x, y, ' ') <= 2:
+                out[y][x] = '.'  # a fleck of rock on open ground
+    return out
+
+
+main()

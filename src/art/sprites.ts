@@ -18,34 +18,37 @@ const TANK_PALETTE: Record<string, number> = {
   A: 0xb8f0ff,
 };
 
-/** The player's tank, facing up: twin barrels, cream hull, blue tread pods. */
+/**
+ * The player's tank, facing up: one long central cannon, cream hull, blue tread
+ * pods with cream front caps, and a rounded three-lobed rear, as in the original.
+ */
 export const PLAYER_TANK: PixelArt = {
   palette: TANK_PALETTE,
   rows: [
-    '........kWkkWk........',
-    '........kwkkwk........',
-    '........kCkkCk........',
-    '........kwkkwk........',
-    '..kkk...kwkkwk...kkk..',
-    '.kyyyk..kCkkCk..kyyyk.',
-    '.kgggk.kkgkkgkk.kgggk.',
-    '.kBBBkkwWWCCWWwkkBBBk.',
-    '.kbbbkkCwaaaawCkkbbbk.',
-    '.kBBBkkCaaAAaaCkkBBBk.',
-    '.kbbbkkgCwwwwCgkkbbbk.',
-    '.kBBBkkGgCCCCgGkkBBBk.',
-    '.kbbbkwwKGGGGKwwkbbbk.',
+    '..........kk..........',
+    '.........kWWk.........',
+    '.........kwCk.........',
+    '.........kwCk.........',
+    '..kkk....kwCk....kkk..',
+    '.kWWWk...kwCk...kWWWk.',
+    '.kwCwk...kgGk...kwCwk.',
+    '.kBBBk.kkwCCkk..kBBBk.',
+    '.kbbbkkwWWCCWwk.kbbbk.',
+    '.kBBBkCwwyrrywwCkBBBk.',
+    '.kbbbkCwaaAAaawCkbbbk.',
+    '.kBBBkgCaaaaaaCgkBBBk.',
+    '.kbbbkwgCwwwwCgwkbbbk.',
     '.kBBBkWwwwwwwwwWkBBBk.',
-    '.kbbbkCwwyrrywwCkbbbk.',
-    '.kBBBkCwwwrrwwwCkBBBk.',
-    '.kbbbkcCCwwwwCCckbbbk.',
-    '.kBBBkgcCCCCCCcgkBBBk.',
-    '.kbbbkGgcwWWwcgGkbbbk.',
-    '.kBBBkKGgCwwCgGKkBBBk.',
-    '.kbbbkKdGgCCgGdKkbbbk.',
-    '.kBBBkkKdGggGdKkkBBBk.',
-    '.krrrk.kKKddKKk.krrrk.',
-    '..kkk...kkkkkk...kkk..',
+    '.kbbbkCwwGKKGwwCkbbbk.',
+    '.kBBBkcCwKddKwCckBBBk.',
+    '.kbbbkgcCwKKwCcgkbbbk.',
+    '.kBBBkGgcCwwCcgGkBBBk.',
+    '.kbbbkKGgcCCcgGKkbbbk.',
+    '.kBBBkkKGgwwgGKkkBBBk.',
+    '.kWwWk.kKGWWGKk.kWwWk.',
+    '.kCwCk..kKwwKk..kCwCk.',
+    '..kkk....kkkk....kkk..',
+    '......................',
   ],
 };
 
@@ -63,8 +66,8 @@ export const PLAYER_TANK_BELLY: PixelArt = {
 export const LIFE_ICON: PixelArt = {
   palette: TANK_PALETTE,
   rows: [
-    '..W.W..',
-    '.kwkwk.',
+    '...W...',
+    '.kkwkk.',
     'bkwWwkb',
     'BkCaCkB',
     'bkwWwkb',

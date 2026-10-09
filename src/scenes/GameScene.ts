@@ -55,7 +55,7 @@ const enum Depth {
 const CROSSHAIR_MAX_TINT = 0xff3030;
 
 /** Emplacements keep their art upright; vehicles and turrets turn. */
-const FIXED_FACING: Partial<Record<EnemyKind, boolean>> = { torchika1: true, torchika2: true };
+const FIXED_FACING: Partial<Record<EnemyKind, boolean>> = { torchika1: true, torchika2: true, ufo: true, parking: true };
 
 interface EnemyView {
   body: Phaser.GameObjects.Image;
@@ -114,7 +114,7 @@ export class GameScene extends Phaser.Scene {
     this.add.image(0, 0, key).setOrigin(0, 0).setDepth(Depth.Terrain);
     if (terrain.hatch) this.add.image(terrain.hatch.x, terrain.hatch.y, 'hatch').setDepth(Depth.Pad);
 
-    const spawns = params.has('peaceful') ? [] : this.testMap ? TEST_SPAWNS : terrain.spawns;
+    const spawns = params.has('peaceful') ? [] : this.testMap ? TEST_SPAWNS : [...terrain.spawns, ...(st.spawns ?? [])];
     const tile = (p: [number, number]) => ({ x: (p[0] + 0.5) * 16, y: (p[1] + 0.5) * 16 });
     this.world = new World(terrain, spawns, {
       lives: this.session.lives,
@@ -123,6 +123,7 @@ export class GameScene extends Phaser.Scene {
       hard: st.hard,
       timeLimit: st.timeLimit,
       guide: st.guide.map(tile),
+      startHeading: ((st.startHeading ?? 0) * Math.PI) / 180,
     });
     for (const z of this.world.jumpZones) this.zoneViews.set(z, this.add.image(z.x, z.y, 'jumpZone').setDepth(Depth.Pad));
     this.tankShadow = this.add.image(0, 0, 'tank').setTintFill(0x000000).setAlpha(0.35).setDepth(Depth.Shadow);
@@ -233,7 +234,7 @@ export class GameScene extends Phaser.Scene {
         s.message = 'NOW YOU ASSAULT ON\n\nNEXT STAGE!!';
         break;
       case 'done':
-        s.message = 'CONGRATULATIONS!\n\nSTAGE 01 IS YOURS.\n\n\nMORE STAGES ARE\n\nON THE WAY...';
+        s.message = `CONGRATULATIONS!\n\nSTAGE ${pad2(this.stage.number)} IS YOURS.\n\n\nMORE STAGES ARE\n\nON THE WAY...`;
         break;
       case 'gameOver':
         s.message = 'GAME OVER';
@@ -292,6 +293,19 @@ export class GameScene extends Phaser.Scene {
           this.explosion(e.enemy.x, e.enemy.y, 'boomAnim');
         }
         this.sfx.play('enemyDie');
+        break;
+      case 'deflected':
+        this.explosion(e.enemy.x, e.enemy.y, 'sparkAnim');
+        this.sfx.play('empty');
+        break;
+      case 'enemyEmerging':
+        this.tweens.add({
+          targets: this.add.image(e.enemy.x, e.enemy.y, 'hole').setDepth(Depth.Crater).setScale(0.2),
+          scale: 1,
+          duration: 500,
+          ease: 'Back.easeOut',
+        });
+        this.sfx.play('raise');
         break;
       case 'enemyFired':
         this.sfx.play('enemyShot');
@@ -422,11 +436,15 @@ export class GameScene extends Phaser.Scene {
   private syncEnemies(): void {
     const alive = new Set<number>();
     for (const e of this.world.enemies) {
+      if (e.state === 'hidden') continue;
       alive.add(e.id);
       const v = this.enemyViews.get(e.id) ?? this.addEnemyView(e);
       const rot = FIXED_FACING[e.kind] ? 0 : e.heading;
-      v.body.setPosition(e.x, e.y).setRotation(rot);
-      v.shadow.setPosition(e.x + SHADOW_X, e.y + SHADOW_Y).setRotation(rot);
+      // Rising out of its hole: grows from nothing, its shadow drawing away as it lifts.
+      const rise = e.state === 'emerging' ? Math.min(1, e.emergeTime / WORLD_TUNING.emergeTime) : 1;
+      const lift = e.kind === 'ufo' ? 1.8 : 1;
+      v.body.setPosition(e.x, e.y).setRotation(rot).setScale(rise);
+      v.shadow.setPosition(e.x + SHADOW_X * lift * rise, e.y + SHADOW_Y * lift * rise).setRotation(rot).setScale(rise);
       if (e.flash > 0) v.body.setTintFill(0xffffff);
       else v.body.clearTint();
     }
@@ -475,7 +493,7 @@ export class GameScene extends Phaser.Scene {
     this.projectileSprites.forEach((img, i) => {
       const p = ps[i];
       img.setVisible(!!p);
-      if (p) img.setTexture(p.kind).setPosition(p.x, p.y).setRotation(p.kind === 'missile' ? p.heading : this.world.tank.heading);
+      if (p) img.setTexture(p.kind).setPosition(p.x, p.y).setRotation(p.kind === 'missile' || p.kind === 'laser' ? p.heading : this.world.tank.heading);
     });
   }
 

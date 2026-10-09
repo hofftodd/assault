@@ -103,6 +103,8 @@ try {
     write(`${name}.png`, renderTerrain(new TileTerrain(st.map, 16, st.seed)), 1);
     console.log(`${name} rendered in ${Math.round(performance.now() - t1)} ms`);
     writeFileSync(join(outDir, `${name}.txt`), st.map.map((r, i) => String(i).padStart(2) + ' ' + r).join('\n'));
+    const terrainSpawns = new TileTerrain(st.map, 16, st.seed).spawns;
+    writeFileSync(join(outDir, `${name}-spawns.json`), JSON.stringify({ spawns: [...terrainSpawns, ...(st.spawns ?? [])], guide: st.guide }));
   }
 } finally {
   await server.close();

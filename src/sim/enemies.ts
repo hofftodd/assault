@@ -2,9 +2,9 @@
  * Enemy roster. Hits and points are from the StrategyWiki Gameplay page; movement
  * and fire-rate numbers are estimates to tune against the original.
  */
-export type EnemyKind = 'type1' | 'type2' | 'type5' | 'torchika1' | 'torchika2' | 'cannon1';
+export type EnemyKind = 'type1' | 'type2' | 'type3' | 'type5' | 'torchika1' | 'torchika2' | 'cannon1' | 'ufo' | 'parking';
 
-export type ProjectileKind = 'orange' | 'pink' | 'missile';
+export type ProjectileKind = 'orange' | 'pink' | 'missile' | 'laser';
 
 export interface ProjectileSpec {
   speed: number;
@@ -20,6 +20,7 @@ export const PROJECTILES: Record<ProjectileKind, ProjectileSpec> = {
   orange: { speed: 85, radius: 2, life: 3.5, shootable: false, homing: 0 },
   pink: { speed: 105, radius: 2, life: 3.5, shootable: false, homing: 0 },
   missile: { speed: 62, radius: 2, life: 4, shootable: true, homing: 1.3 },
+  laser: { speed: 150, radius: 2, life: 2, shootable: false, homing: 0 },
 };
 
 export type FirePattern =
@@ -51,6 +52,10 @@ export interface EnemySpec {
   leavesCrater: boolean;
   /** Draw with the big explosion. */
   large: boolean;
+  /** Only nukes can damage it; regular shots bounce off. */
+  nukeOnly?: boolean;
+  /** Never fires (e.g. a parked tank). */
+  harmless?: boolean;
 }
 
 export const ENEMIES: Record<EnemyKind, EnemySpec> = {
@@ -79,6 +84,20 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
     fireInterval: 2.0,
     fireRange: 180,
     wakeRadius: 170,
+    leavesCrater: true,
+    large: false,
+  },
+  type3: {
+    hits: [1, 3],
+    points: 300,
+    radius: 8,
+    speed: 40,
+    turnRate: 2.6,
+    preferredRange: 75,
+    fire: { kind: 'aimed', projectile: 'pink', count: 1, spacing: 0 },
+    fireInterval: 1.8,
+    fireRange: 180,
+    wakeRadius: 175,
     leavesCrater: true,
     large: false,
   },
@@ -138,9 +157,43 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
     leavesCrater: false,
     large: true,
   },
+  ufo: {
+    hits: [1, 1],
+    points: 800,
+    radius: 9,
+    speed: 0,
+    turnRate: 1.5,
+    preferredRange: 0,
+    fire: { kind: 'aimed', projectile: 'laser', count: 1, spacing: 0 },
+    fireInterval: 1.6,
+    fireRange: 190,
+    wakeRadius: 400,
+    leavesCrater: false,
+    large: false,
+    nukeOnly: true,
+  },
+  parking: {
+    hits: [1, 1],
+    points: 1000,
+    radius: 9,
+    speed: 0,
+    turnRate: 0,
+    preferredRange: 0,
+    fire: { kind: 'aimed', projectile: 'orange', count: 0, spacing: 0 },
+    fireInterval: 99,
+    fireRange: 0,
+    wakeRadius: 0,
+    leavesCrater: true,
+    large: false,
+    harmless: true,
+  },
 };
 
-export type EnemyState = 'dormant' | 'active' | 'dead';
+/**
+ * hidden: underground, waiting for its trigger group to be wiped out.
+ * emerging: its hole has opened and it is rising (can't act or be hit yet).
+ */
+export type EnemyState = 'hidden' | 'emerging' | 'dormant' | 'active' | 'dead';
 
 export interface Enemy {
   id: number;
@@ -156,6 +209,11 @@ export interface Enemy {
   flank: number;
   /** Seconds left of the white damage flash. */
   flash: number;
+  /** Wave this enemy belongs to, and the wave whose destruction makes it emerge. */
+  group?: number;
+  after?: number;
+  /** Seconds spent emerging. */
+  emergeTime: number;
 }
 
 export interface EnemyProjectile {
@@ -173,6 +231,10 @@ export interface Spawn {
   ty: number;
   /** Initial heading in degrees (0 = up). */
   facing?: number;
+  /** Wave number this spawn belongs to. */
+  group?: number;
+  /** Stays underground until every enemy of this wave is gone, then emerges from a hole. */
+  after?: number;
 }
 
 /** Heading (0 = up, clockwise) pointing from (x0, y0) towards (x1, y1). */

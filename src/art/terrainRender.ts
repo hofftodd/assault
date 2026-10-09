@@ -46,6 +46,23 @@ function distanceField(mat: Uint8Array, w: number, h: number, target: (m: number
   return d;
 }
 
+const WATER: RGB[] = [
+  [24, 92, 70],
+  [34, 112, 80],
+  [44, 132, 92],
+  [60, 150, 110],
+  [110, 190, 160],
+];
+
+/** Dark leafy crop rows and thickets. */
+const CROP: RGB[] = [
+  [20, 34, 12],
+  [32, 50, 18],
+  [44, 66, 24],
+  [58, 84, 30],
+  [80, 108, 46],
+];
+
 const CONCRETE: RGB[] = [
   [62, 62, 74],
   [78, 78, 92],
@@ -60,7 +77,13 @@ export function renderTerrain(t: TileTerrain): Rgba {
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) mat[y * w + x] = t.materialAt(x + 0.5, y + 0.5);
 
   const toRock = distanceField(mat, w, h, (m) => m === Material.Rock);
-  const toOpen = distanceField(mat, w, h, (m) => m === Material.Ground || m === Material.Rough || m === Material.Concrete);
+  const toOpen = distanceField(
+    mat,
+    w,
+    h,
+    (m) => m === Material.Ground || m === Material.Rough || m === Material.Concrete || m === Material.Crop || m === Material.Water,
+  );
+  const toLand = distanceField(mat, w, h, (m) => m !== Material.Water);
   const data = new Uint8ClampedArray(w * h * 4);
   const put = (x: number, y: number, c: RGB) => {
     const i = (y * w + x) * 4;
@@ -106,6 +129,24 @@ export function renderTerrain(t: TileTerrain): Rgba {
           const puff = billow(x, y);
           const toLight = billow(x + 2, y + 2) - puff;
           put(x, y, pick(ROCK, Math.sqrt(puff) * 1.1 + toLight * 3 + grain * 0.05 - 0.15));
+          break;
+        }
+        case Material.Water: {
+          // Ripples, lighter towards the shore, with a pale foam line at the edge.
+          const shore = toLand[i];
+          if (shore <= 1.2) {
+            put(x, y, WATER[4]);
+            break;
+          }
+          const ripple = fbm(x / 5, y / 2.5, s + 71, 2);
+          put(x, y, pick(WATER, 0.35 + (ripple - 0.5) * 0.7 + Math.max(0, 3 - shore) * 0.12 + (grain - 0.5) * 0.1));
+          break;
+        }
+        case Material.Crop: {
+          // Rows of leafy plants, lit from the lower right.
+          const row = (x + y * 0.15) % 4 < 2 ? 0.15 : 0;
+          const leaf = fbm(x / 2, y / 2, s + 81, 2);
+          put(x, y, pick(CROP, leaf * 0.9 + row + (grain - 0.5) * 0.25));
           break;
         }
         case Material.Concrete: {

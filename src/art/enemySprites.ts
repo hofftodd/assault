@@ -146,3 +146,58 @@ export function craterArt(): Rgba {
   }
   return p.toRgba();
 }
+
+const PINK_HULL: RGB[] = [[96, 52, 66], [128, 74, 88], [158, 98, 110], [186, 124, 134], [212, 152, 158], [236, 190, 192]];
+
+export const TYPE3_TANK = (): Rgba =>
+  tankArt({ w: 15, h: 19, treadW: 3, barrelLen: 5, barrels: [0], barrelW: 2, turretR: 3.6, hull: PINK_HULL, tread: SLATE_TREAD, turret: PINK_HULL, barrel: PALE[4] });
+
+/** A tank left parked in the fields: long hull, turret turned aside, no crew. */
+export const PARKING_TANK = (): Rgba =>
+  tankArt({ w: 16, h: 22, treadW: 4, barrelLen: 2, barrels: [-3], barrelW: 2, turretR: 4, hull: RUST, tread: GREY_TREAD, turret: RUST.slice(1), barrel: RUST[5] });
+
+const UFO_WHITE: RGB[] = [[90, 110, 100], [130, 160, 146], [170, 200, 186], [205, 228, 216], [235, 248, 240]];
+const UFO_GREEN: RGB[] = [[20, 70, 50], [30, 110, 70], [50, 150, 90], [90, 200, 130]];
+
+/** UFO launcher: a white saucer pod with green fins and a glowing core, seen from above. */
+export function ufoArt(): Rgba {
+  const p = new Painter(22, 22);
+  for (let i = 0; i < 4; i++) {
+    const a = (i * Math.PI) / 2 + Math.PI / 4;
+    const fin = (r: number, da: number): [number, number] => [10.5 + Math.cos(a + da) * r, 10.5 + Math.sin(a + da) * r];
+    p.polygon([fin(4, -0.5), fin(10.5, -0.12), fin(10.5, 0.12), fin(4, 0.5)], () => UFO_GREEN[2]);
+  }
+  p.disc(10.5, 10.5, 6.5, UFO_WHITE);
+  p.disc(10.5, 10.5, 2.6, UFO_GREEN);
+  p.outline();
+  return p.toRgba();
+}
+
+/** Thin laser bolt, flying up. */
+export function laserArt(): Rgba {
+  const p = new Painter(3, 12);
+  for (let y = 0; y < 12; y++) {
+    p.px(1, y, y < 2 ? [255, 255, 255] : [140, 255, 255]);
+    if (y > 1 && y < 10) {
+      p.px(0, y, [40, 160, 220], 180);
+      p.px(2, y, [40, 160, 220], 180);
+    }
+  }
+  return p.toRgba();
+}
+
+/** The pit a UFO launcher rises out of: sandy rim, black depths. */
+export function holeArt(): Rgba {
+  const size = 26;
+  const c = (size - 1) / 2;
+  const p = new Painter(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const d = Math.hypot(x - c, y - c) / 12 + (hash2(x, y, 51) - 0.5) * 0.12;
+      if (d > 1) continue;
+      if (d > 0.72) p.px(x, y, shade([[70, 60, 12], [110, 96, 40], [150, 136, 80]], 0.4 + ((x - c) + (y - c)) / 30));
+      else p.px(x, y, d > 0.55 ? [20, 16, 6] : [4, 4, 4]);
+    }
+  }
+  return p.toRgba();
+}

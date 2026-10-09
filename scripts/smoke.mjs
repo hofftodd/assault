@@ -197,11 +197,36 @@ try {
   await page.waitForFunction(() => window.__assault.world.state === 'exiting', null, { timeout: 5000 });
   await page.waitForTimeout(1500);
   await shot('17-hatch');
-  await page.waitForFunction(() => window.__assault.world.state === 'done', null, { timeout: 12000 }).catch(() => {});
-  check((await page.evaluate(() => window.__assault.world.state)) === 'done', 'the tank drives onto the hatch and drops through');
-  await page.waitForTimeout(800);
-  await shot('18-after-stage');
+  await page.waitForFunction(() => window.__assault.world.state === 'done' || window.__assault.stage === 2, null, { timeout: 12000 }).catch(() => {});
+  check(await page.evaluate(() => window.__assault.world.state === 'done' || window.__assault.stage === 2), 'the tank drives onto the hatch and drops through');
 
+  // Phase 4: stage 2 follows, with UFO launchers rising once their wave is destroyed.
+  await page.waitForFunction(() => window.__assault.stage === 2 && window.__assault.world.state === 'playing', null, { timeout: 10000 }).catch(() => {});
+  const s2 = await page.evaluate(() => {
+    const w = window.__assault.world;
+    return { stage: window.__assault.stage, time: w.timeLeft, hidden: w.enemies.filter((e) => e.state === 'hidden').length, zones: w.jumpZones.length };
+  });
+  check(s2.stage === 2 && s2.time > 155 && s2.hidden === 16 && s2.zones === 2, `stage 2 follows: 2:40 clock, 16 buried UFO launchers, 2 jump zones (${JSON.stringify(s2)})`);
+  await page.waitForTimeout(600);
+  await shot('18-stage2');
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.invulnerable = 1e9;
+    for (let i = w.enemies.length - 1; i >= 0; i--) if (w.enemies[i].group === 1) w.enemies.splice(i, 1);
+  });
+  await page.waitForTimeout(900);
+  const rising = await page.evaluate(() => window.__assault.world.enemies.filter((e) => e.kind === 'ufo' && e.state !== 'hidden').length);
+  check(rising === 3, `wiping out the first wave raises three UFO launchers (${rising})`);
+  await page.waitForTimeout(400);
+  await shot('18b-ufos-rising');
+
+  // End the game on a qualifying score: time runs out on the last life.
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.lives = 1;
+    w.invulnerable = 0;
+    w.timeLeft = 0.05;
+  });
   await page.waitForFunction(() => window.__assault.scene === 'nameEntry', null, { timeout: 12000 }).catch(() => {});
   check(await page.evaluate(() => window.__assault.scene === 'nameEntry'), 'a top score leads to name entry');
   await page.keyboard.type('TODD');
@@ -210,7 +235,7 @@ try {
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__assault.scene === 'title', null, { timeout: 5000 }).catch(() => {});
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('assault.highScores.v1') ?? '[]'));
-  check(saved[0]?.name === 'TODD' && saved[0]?.score >= 50000, `the new top score is saved (${JSON.stringify(saved[0])})`);
+  check(saved[0]?.name === 'TODD' && saved[0]?.score >= 50000 && saved[0]?.stage === '02', `the new top score is saved (${JSON.stringify(saved[0])})`);
   await page.waitForTimeout(7300);
   await shot('20-record-table');
 

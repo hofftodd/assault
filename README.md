@@ -45,8 +45,8 @@ a short lob. The nuke then needs 2.5 s to recharge. **M** mutes the sound. In de
 readout of the levers, the current move and the nuke recharge.
 
 **Enter** or **1** starts a game from the title screen. URL options for testing:
-`?play` skips the title, `?map=test` plays the proving-ground map, and
-`?peaceful` removes the enemies.
+`?play` skips the title, `?stage=N` starts at stage N, `?map=test` plays the
+proving-ground map, and `?peaceful` removes the enemies.
 
 ## Layout
 
@@ -86,4 +86,11 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
     the hatch exit.
   - The title screen with the high-score table, and name entry saved in the
     browser.
-- **Next:** stage 2 onward.
+- **Milestone 5 (done):** stage 2, "Memorial Land Forever". The terrain is
+  converted directly from StrategyWiki's map of the original (ponds, crop fields,
+  rough ground, two jump zones, the cannon battery and hatch strip). The waves
+  follow the walkthrough: each tank group, once destroyed, raises nuke-only UFO
+  launchers from holes in the ground, which fire lasers. Also adds Type 3 tanks,
+  a parked tank worth 1000 points, and the 2:40 clock. The player tank is
+  redrawn with the original's single central cannon.
+- **Next:** area 3, "Crops Grow in River Side" (stages 3-5).

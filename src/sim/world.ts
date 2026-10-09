@@ -45,6 +45,8 @@ export const WORLD_TUNING = {
   hatchDropTime: 2.6,
   /** Guide arrow: a waypoint counts as reached within this many px. */
   guideReach: 72,
+  /** Seconds a UFO launcher takes to rise out of its hole. */
+  emergeTime: 1.4,
   /** Extra lives (a guess: the original's thresholds are unknown). */
   extendFirst: 20000,
   extendEvery: 70000,
@@ -88,6 +90,8 @@ export type WorldEvent =
   | { type: 'roll' }
   | { type: 'blast'; blast: Blast }
   | { type: 'enemyHit'; enemy: Enemy }
+  | { type: 'deflected'; enemy: Enemy }
+  | { type: 'enemyEmerging'; enemy: Enemy }
   | { type: 'enemyKilled'; enemy: Enemy; points: number }
   | { type: 'enemyFired'; enemy: Enemy; projectile: ProjectileKind }
   | { type: 'projectileShotDown'; x: number; y: number }
@@ -115,6 +119,8 @@ export interface WorldOptions {
   guide?: readonly Point[];
   /** Start in the READY pause (default true). */
   startReady?: boolean;
+  /** Initial tank heading in radians (0 = up the map). */
+  startHeading?: number;
 }
 
 export class World {
@@ -156,7 +162,7 @@ export class World {
     spawns: readonly Spawn[],
     opts: WorldOptions,
   ) {
-    this.tank = createTank(terrain.start.x, terrain.start.y);
+    this.tank = createTank(terrain.start.x, terrain.start.y, opts.startHeading ?? 0);
     this.state = opts.startReady === false ? 'playing' : 'ready';
     this.timeLimit = opts.timeLimit ?? Infinity;
     this.timeLeft = this.timeLimit;
@@ -178,14 +184,18 @@ export class World {
         y: (s.ty + 0.5) * terrain.tileSize,
         heading: ((s.facing ?? 180) * Math.PI) / 180,
         hp: spec.hits[this.hard ? 1 : 0],
-        state: 'dormant',
+        state: s.after !== undefined ? 'hidden' : 'dormant',
         fireTimer: 0,
         flank: this.rng.range(-40, 40),
         flash: 0,
+        group: s.group,
+        after: s.after,
+        emergeTime: 0,
       });
     });
     this.playerGround = {
-      solidAt: (x, y) => terrain.solidAt(x, y) || this.enemies.some((e) => (x - e.x) ** 2 + (y - e.y) ** 2 < ENEMIES[e.kind].radius ** 2),
+      solidAt: (x, y) =>
+        terrain.solidAt(x, y) || this.enemies.some((e) => tangible(e) && (x - e.x) ** 2 + (y - e.y) ** 2 < ENEMIES[e.kind].radius ** 2),
       speedAt: (x, y) =>
         terrain.speedAt(x, y) *
         (this.craters.some((c) => (x - c.x) ** 2 + (y - c.y) ** 2 < WORLD_TUNING.craterRadius ** 2) ? WORLD_TUNING.craterSlow : 1),
@@ -338,10 +348,10 @@ export class World {
     }
 
     for (const shot of [...this.weapons.shots]) {
-      const target = this.enemies.find((e) => e.state !== 'dead' && Math.hypot(shot.x - e.x, shot.y - e.y) <= ENEMIES[e.kind].radius + 1.5);
+      const target = this.enemies.find((e) => tangible(e) && Math.hypot(shot.x - e.x, shot.y - e.y) <= ENEMIES[e.kind].radius + 1.5);
       if (target) {
         this.weapons.removeShot(shot);
-        this.damage(target, 1);
+        this.damage(target, 1, false);
         continue;
       }
       const missile = this.projectiles.find(
@@ -371,7 +381,7 @@ export class World {
 
   private applyNuke(blast: Blast): void {
     for (const e of this.enemies) {
-      if (e.state !== 'dead' && blastHits(blast, e.x, e.y, ENEMIES[e.kind].radius)) this.damage(e, WORLD_TUNING.nukeDamage);
+      if (tangible(e) && blastHits(blast, e.x, e.y, ENEMIES[e.kind].radius)) this.damage(e, WORLD_TUNING.nukeDamage, true);
     }
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
@@ -379,8 +389,12 @@ export class World {
     }
   }
 
-  private damage(e: Enemy, hits: number): void {
+  private damage(e: Enemy, hits: number, byNuke: boolean): void {
     if (e.state === 'dormant') this.wake(e);
+    if (ENEMIES[e.kind].nukeOnly && !byNuke) {
+      this.events.push({ type: 'deflected', enemy: e });
+      return;
+    }
     e.hp -= hits;
     e.flash = 0.08;
     if (e.hp > 0) {
@@ -420,6 +434,19 @@ export class World {
       e.flash = Math.max(0, e.flash - dt);
       const spec = ENEMIES[e.kind];
       const dist = this.distToPlayer(e);
+      if (e.state === 'hidden') {
+        // Rises once every enemy of its trigger wave has been destroyed (or left behind).
+        if (this.enemies.some((o) => o.group === e.after && o.state !== 'dead')) continue;
+        e.state = 'emerging';
+        e.emergeTime = 0;
+        this.events.push({ type: 'enemyEmerging', enemy: e });
+        continue;
+      }
+      if (e.state === 'emerging') {
+        e.emergeTime += dt;
+        if (e.emergeTime >= WORLD_TUNING.emergeTime) this.wake(e);
+        continue;
+      }
       if (e.state === 'dormant') {
         if (dist <= spec.wakeRadius) this.wake(e);
         else continue;
@@ -444,7 +471,7 @@ export class World {
         e.heading += clamp(angleDiff(e.heading, toPlayer), spec.turnRate * dt);
       }
 
-      if (this.state !== 'playing' || dist > spec.fireRange) continue;
+      if (this.state !== 'playing' || spec.harmless || dist > spec.fireRange) continue;
       e.fireTimer -= dt;
       if (e.fireTimer > 0) continue;
       if (spec.fire.kind === 'aimed' && Math.abs(angleDiff(e.heading, toPlayer)) > 0.3) continue;
@@ -458,7 +485,7 @@ export class World {
     const clear = (x: number, y: number) =>
       fits(this.terrain, x, y, r) &&
       Math.hypot(x - this.tank.x, y - this.tank.y) > r + TANK_TUNING.radius &&
-      this.enemies.every((o) => o === e || o.state === 'dead' || Math.hypot(x - o.x, y - o.y) > r + ENEMIES[o.kind].radius);
+      this.enemies.every((o) => o === e || !tangible(o) || Math.hypot(x - o.x, y - o.y) > r + ENEMIES[o.kind].radius);
     if (clear(e.x + dx, e.y + dy)) {
       e.x += dx;
       e.y += dy;
@@ -536,5 +563,8 @@ export class World {
     }
   }
 }
+
+/** Enemies that can be hit and collided with (not underground, rising or destroyed). */
+const tangible = (e: Enemy) => e.state === 'dormant' || e.state === 'active';
 
 const clamp = (v: number, max: number) => Math.max(-max, Math.min(max, v));

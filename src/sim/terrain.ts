@@ -8,6 +8,10 @@ export const Material = {
   Rough: 3,
   /** Paved base apron: drivable, with crisp straight edges. */
   Concrete: 4,
+  /** Ponds and rivers: tanks can't cross, shots fly over. */
+  Water: 5,
+  /** Crop fields and thickets: drivable but slow. */
+  Crop: 6,
 } as const;
 export type Material = (typeof Material)[keyof typeof Material];
 
@@ -27,11 +31,12 @@ export interface Terrain {
 
 /**
  * Tile map legend (one character per tile):
- *   ' ' void   '#' rock   '.' ground   ',' rough ground   '=' concrete
+ *   ' ' void   '#' rock   '.' ground   ',' rough ground   '=' concrete   '~' water   'f' crops
  *   'b' bush   'o' boulder   'P' player start   'J' jump zone   (all on ground)
  *   'H' exit hatch (on concrete)
  *   Enemies on ground: '1' Type 1   '2' Type 2   '5' Type 5   'a' 4-way Torchika   'A' 8-way Torchika
  *   'C' Type 1 cannon (on concrete)
+ * Waves that appear in sequence are listed in the stage definition instead.
  */
 const LEGEND: Record<string, Material> = {
   ' ': Material.Void,
@@ -39,6 +44,8 @@ const LEGEND: Record<string, Material> = {
   '.': Material.Ground,
   ',': Material.Rough,
   '=': Material.Concrete,
+  '~': Material.Water,
+  f: Material.Crop,
   b: Material.Ground,
   o: Material.Ground,
   P: Material.Ground,
@@ -64,6 +71,7 @@ const ENEMY_CHARS: Record<string, EnemyKind> = {
 /** How far (px) tile boundaries are pushed around so cliffs look natural. */
 const JITTER = 9;
 const ROUGH_SPEED = 0.55;
+const CROP_SPEED = 0.75;
 
 export class TileTerrain implements Terrain {
   readonly cols: number;
@@ -126,11 +134,12 @@ export class TileTerrain implements Terrain {
 
   solidAt(x: number, y: number): boolean {
     const m = this.materialAt(x, y);
-    return m === Material.Void || m === Material.Rock;
+    return m === Material.Void || m === Material.Rock || m === Material.Water;
   }
 
   speedAt(x: number, y: number): number {
-    return this.materialAt(x, y) === Material.Rough ? ROUGH_SPEED : 1;
+    const m = this.materialAt(x, y);
+    return m === Material.Rough ? ROUGH_SPEED : m === Material.Crop ? CROP_SPEED : 1;
   }
 
   /** Cliffs stop shots; they fly on over open ground and the void. */

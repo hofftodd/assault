@@ -48,10 +48,10 @@ export function createSession(): Session {
 }
 
 /** Reset the per-game fields for a fresh credit. */
-export function newGame(s: Session): void {
+export function newGame(s: Session, stageIndex = 0): void {
   s.score = 0;
   s.lives = STARTING_LIVES;
-  s.stageIndex = 0;
+  s.stageIndex = stageIndex;
   s.stageReached = '01';
   s.message = null;
   s.clock = null;

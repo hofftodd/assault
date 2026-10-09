@@ -302,3 +302,44 @@ describe('stage flow', () => {
     expect(w.guideTarget).toEqual(hatch);
   });
 });
+
+describe('waves and UFO launchers', () => {
+  it('launchers stay underground until their wave is destroyed, then rise and fight', () => {
+    const w = new World(
+      field(),
+      [
+        { kind: 'torchika1', tx: 50, ty: 46, group: 1 },
+        { kind: 'ufo', tx: 54, ty: 45, after: 1 },
+      ],
+      { startReady: false, lives: 3 },
+    );
+    w.invulnerable = 1e9;
+    run(w, 1);
+    const ufo = w.enemies.find((e) => e.kind === 'ufo')!;
+    expect(ufo.state).toBe('hidden');
+    w.step(DT, 'idle', FIRE);
+    const ev = run(w, 0.5);
+    expect(types(ev)).toContain('enemyEmerging');
+    expect(ufo.state).toBe('emerging');
+    run(w, WORLD_TUNING.emergeTime);
+    expect(ufo.state).toBe('active');
+  });
+
+  it('launchers shrug off regular shots but fall to a nuke', () => {
+    const w = new World(field(), [{ kind: 'ufo', tx: 50, ty: 46 }], { startReady: false, lives: 3 });
+    w.invulnerable = 1e9;
+    w.step(DT, 'idle', FIRE);
+    const ev = run(w, 0.4);
+    expect(types(ev)).toContain('deflected');
+    expect(w.enemies).toHaveLength(1);
+    run(w, 0.3 + WEAPON_TUNING.nukeAimTime * 0.5, 'wheelie');
+    w.step(DT, 'wheelie', FIRE);
+    const killed = run(w, WEAPON_TUNING.nukeFlightTime + 0.1, 'wheelie').find((e) => e.type === 'enemyKilled');
+    expect(killed).toMatchObject({ points: 800 });
+  });
+
+  it('a parked tank never fires', () => {
+    const w = new World(field(), [{ kind: 'parking', tx: 50, ty: 47 }], { startReady: false, lives: 3 });
+    expect(types(run(w, 5))).not.toContain('enemyFired');
+  });
+});

@@ -57,8 +57,12 @@ export class Sfx {
         this.burst(t, 0.2, 900, 200, 0.3);
         break;
       case 'nukeBlast':
-        this.burst(t, 1.1, 1800, 60, 0.9);
-        this.tone('sine', 90, 28, t, 0.8, 0.8);
+        // A deep, heavy boom: a falling sub-bass thump, a dark roar, and a long rumbling tail.
+        this.tone('square', 110, 38, t, 0.22, 0.22);
+        this.tone('sine', 72, 26, t, 1.8, 1.0);
+        this.tone('triangle', 48, 20, t + 0.03, 2.2, 0.7);
+        this.burst(t, 1.6, 900, 40, 0.95);
+        this.burst(t + 0.15, 2.6, 260, 30, 0.6);
         break;
       case 'roll':
         this.burst(t, 0.25, 600, 2200, 0.12);

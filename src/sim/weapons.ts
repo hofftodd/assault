@@ -25,7 +25,7 @@ export const WEAPON_TUNING = {
   /** flight time (s) and peak height of the arc (px) for a full-range lob; shorter lobs are quicker and lower */
   nukeFlightTime: 0.9,
   nukeApex: 26,
-  nukeBlastRadius: 30,
+  nukeBlastRadius: 52,
   /** after firing a nuke the tank must wait this long (s), except while raised by a jump zone */
   nukeCooldown: 2.5,
 };

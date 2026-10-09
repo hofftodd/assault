@@ -25,7 +25,8 @@ export function crosshairArt(): Rgba {
 }
 
 /** Radius (logical px) of the shockwave ring texture; the scene scales it to the blast. */
-export const SHOCKWAVE_RADIUS = 32;
+/** Drawn at the nuke's full blast radius (WEAPON_TUNING.nukeBlastRadius), so the ring stays crisp. */
+export const SHOCKWAVE_RADIUS = 52;
 
 /** A thin white ring for the nuke shockwave; the scene scales it up as it expands. */
 export function shockwaveArt(): Rgba {

@@ -37,7 +37,8 @@ export interface ProjectileSpec {
 }
 
 export const PROJECTILES: Record<ProjectileKind, ProjectileSpec> = {
-  orange: { speed: 85, radius: 2, life: 3.5, shootable: false, homing: 0 },
+  // Small orange shells can be shot down, like missiles; pink shots and lasers can't.
+  orange: { speed: 85, radius: 2, life: 3.5, shootable: true, homing: 0 },
   pink: { speed: 105, radius: 2, life: 3.5, shootable: false, homing: 0 },
   missile: { speed: 62, radius: 2, life: 4, shootable: true, homing: 1.3 },
   laser: { speed: 150, radius: 2, life: 2, shootable: false, homing: 0 },

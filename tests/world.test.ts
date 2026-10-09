@@ -189,13 +189,18 @@ describe('damaging enemies', () => {
     expect(e.y + 30 - slow.y).toBeLessThan(e.y + 30 - fast.y);
   });
 
-  it('player shots can knock down missiles', () => {
+  it.each(['missile', 'orange'] as const)('player shots can knock down %s shots, but not pink ones', (kind) => {
     const w = new World(field(), [], { startReady: false, lives: 3 });
-    w.projectiles.push({ kind: 'missile', x: w.tank.x, y: w.tank.y - 40, heading: Math.PI, life: 4 });
+    w.projectiles.push({ kind, x: w.tank.x, y: w.tank.y - 40, heading: Math.PI, life: 4 });
     w.invulnerable = 1e9;
     w.step(DT, 'idle', FIRE);
     expect(types(run(w, 0.3))).toContain('projectileShotDown');
     expect(w.projectiles).toHaveLength(0);
+    const pink = new World(field(), [], { startReady: false, lives: 3 });
+    pink.projectiles.push({ kind: 'pink', x: pink.tank.x, y: pink.tank.y - 40, heading: Math.PI, life: 4 });
+    pink.invulnerable = 1e9;
+    pink.step(DT, 'idle', FIRE);
+    expect(types(run(pink, 0.3))).not.toContain('projectileShotDown');
   });
 
   it('awards extra lives at score thresholds', () => {

@@ -22,7 +22,7 @@ describe('the soundtrack', () => {
     const c = compile(SONGS[name]);
     expect(c.notes.length).toBeGreaterThanOrEqual(8);
     for (const n of c.notes) {
-      const [lo, hi] = n.part === 'bass' ? [40, 260] : [180, 1400];
+      const [lo, hi] = n.part === 'bass' ? [40, 260] : n.part === 'pad' ? [90, 400] : [180, 1400];
       expect(n.freq, `${n.part} note at step ${n.step}`).toBeGreaterThan(lo);
       expect(n.freq, `${n.part} note at step ${n.step}`).toBeLessThan(hi);
       expect(n.step + n.len).toBeLessThanOrEqual(c.steps);

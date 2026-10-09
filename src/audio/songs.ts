@@ -1,6 +1,7 @@
 /**
  * The soundtrack, written as data: original tunes in the spirit of an 80s arcade
- * board, a driving synth bass and drum machine under futuristic keyboard leads. Each song is sections of four bars, one chord per bar, with a melody of
+ * board. A driving synth bass and drum machine under alien keyboard leads, in
+ * dark harmony: Phrygian seconds, chords a half step or a tritone apart. Each song is sections of four bars, one chord per bar, with a melody of
  * eighth notes; the bass, arpeggio and drum parts follow per-bar templates.
  *
  * Melody tokens (one per eighth note, bars separated by '|' for readability):
@@ -13,8 +14,8 @@
 
 export type TrackName = 'stage1' | 'land' | 'river' | 'base1' | 'base2' | 'clear' | 'areaClear' | 'gameOver' | 'ending';
 
-/** synth: twin detuned saws; pulse: hollow detuned squares; brass: an FM horn. */
-export type LeadVoice = 'synth' | 'pulse' | 'brass';
+/** alien: squelchy wide-detuned saws; synth: brighter saws; pulse: hollow detuned squares; brass: an FM horn. */
+export type LeadVoice = 'alien' | 'synth' | 'pulse' | 'brass';
 
 export interface Section {
   chords: string[];
@@ -27,126 +28,136 @@ export interface Song {
   lead: LeadVoice;
   bass?: string;
   arp?: string;
+  /** A low drone on each bar's root and fifth. */
+  pad?: boolean;
   drums?: string;
   sections: Record<string, Section>;
   order: string[];
 }
 
 export const SONGS: Record<TrackName, Song> = {
-  /** Stage 1: bright and heroic, A minor. */
+  /** Stage 1: E Phrygian, the flattened second giving it a cold, alien edge. */
   stage1: {
     bpm: 150,
     loop: true,
-    lead: 'synth',
+    lead: 'alien',
+    pad: true,
     bass: 'RRORRRORRRORRROR',
     arp: '0.1.2.1.0.1.2.1.',
     drums: 'xhhhshhhxhxhshhh',
     sections: {
-      A: { chords: ['Am', 'F', 'G', 'E'], melody: 'A4 - C5 - E5 - D5 C5 | A4 - - - F4 - A4 C5 | B4 - D5 - G5 - F5 D5 | E5 - - - G#4 - B4 -' },
-      B: { chords: ['F', 'G', 'E', 'Am'], melody: 'C5 - A4 - C5 - F5 - | D5 - B4 - D5 - G5 - | E5 - D5 - C5 - B4 G#4 | A4 - - - - - . .' },
-      C: { chords: ['Dm', 'Am', 'Dm', 'E'], melody: 'F5 - E5 - D5 - A4 - | C5 - B4 - A4 - E4 - | F4 - A4 - D5 - F5 - | E5 - - - - - - -' },
+      A: { chords: ['Em', 'F', 'Em', 'Bb'], melody: 'E4 - B4 - G4 - F4 E4 | F4 - - - A4 - C5 B4 | B4 - - - G4 - E4 F4 | Bb4 - - - D5 - F5 E5' },
+      B: { chords: ['Cm', 'B', 'Em', 'Em'], melody: 'C5 - Eb5 - G5 - F#5 G5 | D#5 - - - F#5 - B4 - | E5 - D5 - B4 - G4 F4 | E4 - - - - - . .' },
+      C: { chords: ['Am', 'Bb', 'Am', 'B'], melody: 'A4 - - - E5 - - - | F5 - - - D5 - Bb4 - | C5 - B4 - A4 - E4 - | D#4 - - - F#4 - B4 -' },
     },
     order: ['A', 'A', 'B', 'C', 'A', 'B'],
   },
-  /** Stages 2 and 6 (the original reuses one theme for both): driving and melancholy, D minor. */
+  /** Stages 2 and 6 (the original reuses one theme for both): D minor sliding to E flat and B flat minor. */
   land: {
     bpm: 140,
     loop: true,
     lead: 'pulse',
+    pad: true,
     bass: 'R.RRR.RRR.RRR.RO',
     arp: '0.2.1.2.0.2.1.2.',
     drums: 'xhhhshhhxhhxshhh',
     sections: {
-      A: { chords: ['Dm', 'Bb', 'C', 'Am'], melody: 'D5 - - - A4 - D5 E5 | F5 - - - E5 - D5 - | E5 - - - C5 - G4 - | A4 - - - - - . .' },
-      B: { chords: ['Dm', 'Bb', 'Gm', 'A'], melody: 'F5 - E5 - D5 - F5 - | D5 - - - Bb4 - F4 - | G4 - Bb4 - D5 - G5 - | E5 - - - C#5 - A4 -' },
-      C: { chords: ['Gm', 'A', 'Dm', 'A'], melody: 'Bb4 - A4 - G4 - D5 - | C#5 - - - E5 - A5 - | F5 - E5 - D5 - C5 - | C#5 - - - E5 - - -' },
+      A: { chords: ['Dm', 'Eb', 'Dm', 'Bbm'], melody: 'D5 - - - A4 - D5 Eb5 | Eb5 - - - G5 - Bb4 - | A4 - F4 - D4 - A4 - | Bb4 - - - Db5 - F5 -' },
+      B: { chords: ['Gm', 'Ab', 'Dm', 'A'], melody: 'G4 - Bb4 - D5 - G5 - | Ab4 - C5 - Eb5 - Ab5 - | F5 - E5 - D5 - A4 - | C#5 - - - E5 - A4 -' },
+      C: { chords: ['Bbm', 'A', 'Dm', 'Dm'], melody: 'Db5 - - - F5 - Bb5 - | A5 - - - E5 - C#5 - | D5 - F5 - A5 - G5 F5 | D5 - - - - - . .' },
     },
     order: ['A', 'B', 'A', 'C'],
   },
-  /** Area 3, stages 3-5 and 10: a loping groove in E minor. */
+  /** Area 3, stages 3-5 and 10: a stalking groove, E minor creeping up to F minor and back. */
   river: {
     bpm: 132,
     loop: true,
-    lead: 'synth',
+    lead: 'alien',
+    pad: true,
     bass: 'RR.RRO.RRR.RRO.R',
     arp: '0..1..2.3..2..1.',
     drums: 'xhhhshxhxhhhshxh',
     sections: {
-      A: { chords: ['Em', 'C', 'D', 'Bm'], melody: 'E5 - G5 - B5 - A5 G5 | E5 - - - C5 - E5 - | F#5 - - - D5 - A4 - | B4 - - - - - . .' },
-      B: { chords: ['Em', 'C', 'Am', 'B'], melody: 'B4 - E5 - G5 - F#5 E5 | G5 - - - E5 - C5 - | A4 - C5 - E5 - A5 - | F#5 - - - D#5 - B4 -' },
-      C: { chords: ['C', 'D', 'Em', 'Em'], melody: 'G5 - - - E5 - C5 - | A5 - - - F#5 - D5 - | E5 - D5 E5 G5 - B5 - | E6 - - - - - . .' },
+      A: { chords: ['Em', 'Fm', 'Em', 'Fm'], melody: 'E5 - G5 - B5 - Bb5 A5 | Ab5 - - - F5 - C5 - | B4 - E5 - G5 - F#5 E5 | F5 - Ab5 - C6 - - -' },
+      B: { chords: ['Cm', 'B', 'Am', 'B'], melody: 'G5 - - - Eb5 - C5 - | D#5 - - - F#5 - B4 - | A4 - C5 - E5 - G5 F5 | F#5 - - - D#5 - B4 -' },
+      C: { chords: ['Em', 'Bb', 'Em', 'B'], melody: 'E5 - - - B4 - E5 - | F5 - - - D5 - Bb4 - | G4 - B4 - E5 - G5 - | F#5 - - - - - . .' },
     },
     order: ['A', 'B', 'A', 'C'],
   },
-  /** Stage 7, inside the enemy base: tense, C minor, with racing arpeggios. */
+  /** Stage 7, inside the enemy base: C minor against D flat and a tritone away, G flat. */
   base1: {
     bpm: 156,
     loop: true,
     lead: 'pulse',
+    pad: true,
     bass: 'RRRRRRRRRRRRRRRR',
     arp: '0123012301230123',
     drums: 'xhxhshxhxhxhshxx',
     sections: {
-      A: { chords: ['Cm', 'Ab', 'Bb', 'G'], melody: 'C5 - Eb5 - G5 - C6 - | Ab5 - G5 - Eb5 - C5 - | Bb4 - D5 - F5 - Bb5 - | G5 - - - B4 - D5 -' },
-      B: { chords: ['Cm', 'Ab', 'Fm', 'G'], melody: 'G5 - - - Eb5 - C5 - | C5 - Eb5 - Ab5 - G5 - | F5 - Ab5 - C6 - Ab5 - | G5 - F5 - Eb5 - D5 -' },
+      A: { chords: ['Cm', 'Db', 'Cm', 'Gb'], melody: 'C5 - Eb5 - G5 - C6 - | Db6 - C6 - Ab5 - F5 - | G5 - Eb5 - C5 - G4 - | Gb4 - Bb4 - Db5 - F5 -' },
+      B: { chords: ['Abm', 'G', 'Cm', 'G'], melody: 'Ab4 - B4 - Eb5 - Ab5 - | G5 - - - D5 - B4 - | C5 - Eb5 - G5 - Ab5 G5 | G5 - F5 - Eb5 - D5 -' },
     },
     order: ['A', 'A', 'B', 'B'],
   },
-  /** Stages 8, 9 and 11, the base's last theme: urgent, F sharp minor. */
+  /** Stages 8, 9 and 11, the base's last theme: urgent, F sharp minor against G and C. */
   base2: {
     bpm: 164,
     loop: true,
-    lead: 'synth',
+    lead: 'alien',
+    pad: true,
     bass: 'RORORORORORORORO',
     arp: '0.1.2.3.2.1.0.1.',
     drums: 'xhhxshhxxhhxshsx',
     sections: {
-      A: { chords: ['F#m', 'D', 'E', 'C#m'], melody: 'F#5 - - - C#5 - F#5 A5 | F#5 - - - D5 - A4 - | G#4 - B4 - E5 - G#5 - | E5 - - - C#5 - - -' },
-      B: { chords: ['F#m', 'D', 'Bm', 'C#'], melody: 'A5 - G#5 - F#5 - C#5 - | D5 - F#5 - A5 - D6 - | B5 - A5 - F#5 - D5 - | C#5 - F5 - G#5 - - -' },
+      A: { chords: ['F#m', 'G', 'F#m', 'C'], melody: 'F#5 - - - C#5 - F#5 A5 | G5 - - - D5 - B4 - | A4 - C#5 - F#5 - A5 G5 | G5 - E5 - C5 - - -' },
+      B: { chords: ['Dm', 'C#', 'F#m', 'C#'], melody: 'D5 - F5 - A5 - D6 - | C#6 - - - G#5 - F5 - | F#5 - A5 - C#6 - B5 A5 | G#5 - - - F5 - C#5 -' },
     },
     order: ['A', 'A', 'B', 'A', 'B'],
   },
-  /** Stage clear: a short fanfare. */
+  /** Stage clear: a minor fanfare that lands on a major chord. */
   clear: {
     bpm: 160,
     loop: false,
-    lead: 'synth',
+    lead: 'alien',
     bass: 'R-------O-------',
     drums: 'c...k...k.k.s...',
-    sections: { A: { chords: ['C', 'C'], melody: 'C5 - E5 - G5 - C6 - | B5 - G5 - C6 - - -' } },
+    sections: { A: { chords: ['Cm', 'C'], melody: 'C5 - Eb5 - G5 - C6 - | B5 - G5 - C6 - - -' } },
     order: ['A'],
   },
-  /** Leaving an area by hatch or launch pad: a longer fanfare. */
+  /** Leaving an area by hatch or launch pad: G minor rising to a G major landing. */
   areaClear: {
     bpm: 140,
     loop: false,
-    lead: 'synth',
+    lead: 'alien',
+    pad: true,
     bass: 'R...O...R...O...',
     arp: '0.1.2.3.0.1.2.3.',
     drums: 'c.h.s.h.k.h.s.h.',
-    sections: { A: { chords: ['G', 'C', 'D', 'G'], melody: 'G4 - B4 - D5 - G5 - | E5 - G5 - C6 - - - | D5 - F#5 - A5 - D6 - | B5 - - - G5 - - -' } },
+    sections: { A: { chords: ['Gm', 'Eb', 'F', 'G'], melody: 'G4 - Bb4 - D5 - G5 - | Eb5 - G5 - Bb5 - - - | F5 - A5 - C6 - - - | B5 - - - G5 - - -' } },
     order: ['A'],
   },
-  /** Game over: a falling lament. */
+  /** Game over: a falling lament that never resolves. */
   gameOver: {
     bpm: 100,
     loop: false,
     lead: 'pulse',
+    pad: true,
     bass: 'R-------........',
-    sections: { A: { chords: ['Dm', 'Am'], melody: 'F5 - E5 - D5 - C5 - | B4 - - - A4 - - -' } },
+    sections: { A: { chords: ['Dm', 'A'], melody: 'F5 - E5 - D5 - C#5 - | Bb4 - - - A4 - - -' } },
     order: ['A'],
   },
-  /** The ending and the high-score entry: a slow, proud anthem in C. */
+  /** The ending and the high-score entry: a slow anthem, the war over, still a little strange. */
   ending: {
     bpm: 96,
     loop: true,
-    lead: 'synth',
+    lead: 'alien',
+    pad: true,
     bass: 'R-------O-------',
     arp: '0.1.2.1.0.1.2.1.',
     drums: 'k.......s.......',
     sections: {
       A: { chords: ['C', 'G', 'Am', 'F'], melody: 'E5 - - - D5 - C5 - | D5 - - - G4 - - - | C5 - - - E5 - A5 - | A5 - G5 - F5 - - -' },
-      B: { chords: ['C', 'G', 'F', 'C'], melody: 'G5 - - - E5 - C5 - | D5 - - - B4 - G4 - | A4 - C5 - F5 - A5 - | G5 - - - - - . .' },
+      B: { chords: ['Ab', 'Bb', 'F', 'C'], melody: 'Eb5 - - - C5 - Ab4 - | D5 - - - Bb4 - F4 - | A4 - C5 - F5 - A5 - | G5 - - - - - . .' },
     },
     order: ['A', 'B'],
   },
@@ -161,7 +172,7 @@ export function stageTrack(stage: number): TrackName {
   return 'stage1';
 }
 
-export type Part = 'lead' | 'bass' | 'arp';
+export type Part = 'lead' | 'bass' | 'arp' | 'pad';
 export type DrumKind = 'kick' | 'snare' | 'hat' | 'crash';
 
 export interface NoteEvent {
@@ -252,6 +263,7 @@ export function compile(song: Song): Compiled {
         const n = ch === '3' ? mid[0] + 12 : /[012]/.test(ch) ? mid[Number(ch)] : null;
         if (n !== null) notes.push({ part: 'arp', step: start + step, len, freq: midiFreq(n) });
       });
+      if (song.pad) for (const n of [low[0] + 12, low[2] + 12]) notes.push({ part: 'pad', step: start, len: 16, freq: midiFreq(n) });
       if (song.drums) layTemplate(song.drums, bar + b, (ch, step) => {
         for (const kind of DRUMS[ch] ?? []) drums.push({ kind, step: start + step });
       });

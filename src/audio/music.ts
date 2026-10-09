@@ -41,14 +41,18 @@ interface SynthPatch extends Envelope {
 
 type Patch = FmPatch | SynthPatch;
 
-const PATCHES: Record<LeadVoice | 'bass' | 'arp', Patch> = {
+const PATCHES: Record<LeadVoice | 'bass' | 'arp' | 'pad', Patch> = {
+  // The alien lead: wide-detuned saws through a squelchy resonant filter, deep slow vibrato.
+  alien: { kind: 'synth', wave: 'sawtooth', detune: 30, cutoff: 2000, cutoffEnd: 620, resonance: 11, vibrato: 0.014, attack: 0.015, decay: 0.35, sustain: 0.8, release: 0.18, vol: 0.085 },
   synth: { kind: 'synth', wave: 'sawtooth', detune: 14, cutoff: 5200, cutoffEnd: 2200, resonance: 5, vibrato: 0.007, attack: 0.012, decay: 0.3, sustain: 0.75, release: 0.12, vol: 0.075 },
-  pulse: { kind: 'synth', wave: 'square', detune: 10, cutoff: 4200, cutoffEnd: 1800, resonance: 3, vibrato: 0.006, attack: 0.008, decay: 0.25, sustain: 0.7, release: 0.1, vol: 0.06 },
+  pulse: { kind: 'synth', wave: 'square', detune: 18, cutoff: 2200, cutoffEnd: 620, resonance: 9, vibrato: 0.012, attack: 0.01, decay: 0.3, sustain: 0.75, release: 0.15, vol: 0.07 },
   brass: { kind: 'fm', ratio: 1, index: 2.6, indexEnd: 0.9, attack: 0.03, decay: 0.25, sustain: 0.75, release: 0.08, vol: 0.13 },
-  // The driving bass: bright FM pluck that snaps shut, every sixteenth.
-  bass: { kind: 'fm', ratio: 1, index: 4.5, indexEnd: 0.6, attack: 0.003, decay: 0.09, sustain: 0.55, release: 0.03, vol: 0.24 },
-  // Glassy square-wave arpeggios under the lead.
-  arp: { kind: 'synth', wave: 'square', detune: 6, cutoff: 3600, cutoffEnd: 900, resonance: 2, vibrato: 0, attack: 0.002, decay: 0.08, sustain: 0.2, release: 0.04, vol: 0.03 },
+  // The driving bass: a growling FM pulse with a sub-octave modulator, every sixteenth.
+  bass: { kind: 'fm', ratio: 0.5, index: 3.6, indexEnd: 0.5, attack: 0.003, decay: 0.1, sustain: 0.55, release: 0.03, vol: 0.26 },
+  // Alien chimes: inharmonic FM bells, metallic and cold.
+  arp: { kind: 'fm', ratio: 3.73, index: 1.6, indexEnd: 0.1, attack: 0.002, decay: 0.14, sustain: 0.12, release: 0.08, vol: 0.03 },
+  // A dark drone under each bar: detuned saws, filtered right down, swelling in slowly.
+  pad: { kind: 'synth', wave: 'sawtooth', detune: 22, cutoff: 900, cutoffEnd: 480, resonance: 3, vibrato: 0.004, attack: 0.45, decay: 1.2, sustain: 0.85, release: 0.5, vol: 0.035 },
 };
 
 /**
@@ -59,7 +63,21 @@ const PATCHES: Record<LeadVoice | 'bass' | 'arp', Patch> = {
 export class MusicPlayer {
   private readonly bus: GainNode;
   private readonly compiled = new Map<TrackName, Compiled>();
-  private track: { name: TrackName; song: Compiled; loop: boolean; out: GainNode; start: number; next: number; drum: number } | null = null;
+  private track: {
+    name: TrackName;
+    song: Compiled;
+    loop: boolean;
+    /** Dry output, and the send into the echo, both faded when the track stops. */
+    out: GainNode;
+    send: GainNode;
+    start: number;
+    next: number;
+    drum: number;
+    /** The last lead note, for gliding into the next. */
+    lastLead: { freq: number; end: number } | null;
+  } | null = null;
+  /** A dark, filtered echo the lead and chimes ring out into. */
+  private readonly echoIn: GainNode;
   private timer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
@@ -72,6 +90,18 @@ export class MusicPlayer {
     this.bus = ctx.createGain();
     this.bus.gain.value = 0.75;
     this.bus.connect(out);
+    this.echoIn = ctx.createGain();
+    const delay = ctx.createDelay(1);
+    delay.delayTime.value = 0.33;
+    const tone = ctx.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = 2000;
+    const feedback = ctx.createGain();
+    feedback.gain.value = 0.42;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.4;
+    this.echoIn.connect(delay).connect(tone).connect(feedback).connect(delay);
+    tone.connect(wet).connect(this.bus);
   }
 
   /** The track playing (or the jingle that last played), if any. */
@@ -90,7 +120,9 @@ export class MusicPlayer {
     }
     const out = this.ctx.createGain();
     out.connect(this.bus);
-    this.track = { name, song, loop: SONGS[name].loop, out, start: this.ctx.currentTime + 0.05, next: 0, drum: 0 };
+    const send = this.ctx.createGain();
+    send.connect(this.echoIn);
+    this.track = { name, song, loop: SONGS[name].loop, out, send, start: this.ctx.currentTime + 0.05, next: 0, drum: 0, lastLead: null };
     this.timer ??= setInterval(() => this.schedule(), TICK_MS);
     this.schedule();
   }
@@ -100,9 +132,14 @@ export class MusicPlayer {
     this.track = null;
     if (!t) return;
     const now = this.ctx.currentTime;
-    t.out.gain.setValueAtTime(t.out.gain.value, now);
-    t.out.gain.linearRampToValueAtTime(0, now + fade);
-    setTimeout(() => t.out.disconnect(), (fade + 1) * 1000);
+    for (const g of [t.out, t.send]) {
+      g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.linearRampToValueAtTime(0, now + fade);
+    }
+    setTimeout(() => {
+      t.out.disconnect();
+      t.send.disconnect();
+    }, (fade + 1) * 1000);
   }
 
   private schedule(): void {
@@ -134,7 +171,7 @@ export class MusicPlayer {
         continue;
       }
       if (noteAt <= drumAt) {
-        this.voice(note, noteAt, song.stepTime, t.out);
+        this.voice(note, noteAt, song.stepTime, t);
         t.next++;
       } else {
         this.hit(drum.kind, drumAt, t.out);
@@ -143,9 +180,9 @@ export class MusicPlayer {
     }
   }
 
-  private voice(n: NoteEvent, at: number, stepTime: number, out: AudioNode): void {
-    const lead = this.track ? SONGS[this.track.name].lead : 'synth';
-    const p = PATCHES[n.part === 'lead' ? lead : n.part];
+  private voice(n: NoteEvent, at: number, stepTime: number, t: NonNullable<MusicPlayer['track']>): void {
+    const p = PATCHES[n.part === 'lead' ? SONGS[t.name].lead : n.part];
+    const out = t.out;
     const ctx = this.ctx;
     const dur = Math.max(0.04, n.len * stepTime * 0.92);
     const end = at + dur + p.release * 2;
@@ -155,11 +192,19 @@ export class MusicPlayer {
     amp.gain.setTargetAtTime(p.vol * p.sustain, at + p.attack, p.decay / 3);
     amp.gain.setTargetAtTime(0, at + dur, p.release / 3);
     amp.connect(out);
+    if (n.part !== 'bass') amp.connect(t.send);
+    // The lead slides into each note from the one before, if it follows straight on.
+    const from = n.part === 'lead' && t.lastLead && t.lastLead.end >= at - stepTime * 1.5 ? t.lastLead.freq : null;
+    if (n.part === 'lead') t.lastLead = { freq: n.freq, end: at + dur };
+    const pitch = (f: AudioParam) => {
+      f.setValueAtTime(from ?? n.freq, at);
+      if (from) f.exponentialRampToValueAtTime(n.freq, at + 0.05);
+    };
     const oscs: OscillatorNode[] = [];
 
     if (p.kind === 'fm') {
       const car = ctx.createOscillator();
-      car.frequency.value = n.freq;
+      pitch(car.frequency);
       const mod = ctx.createOscillator();
       mod.frequency.value = n.freq * p.ratio;
       const depth = ctx.createGain();
@@ -189,7 +234,7 @@ export class MusicPlayer {
       for (const d of [-p.detune / 2, p.detune / 2]) {
         const o = ctx.createOscillator();
         o.type = p.wave;
-        o.frequency.value = n.freq;
+        pitch(o.frequency);
         o.detune.value = d;
         if (lfoDepth) lfoDepth.connect(o.frequency);
         o.connect(filter);

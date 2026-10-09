@@ -165,9 +165,11 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   (four each of Types 1, 2 and 3). The launch pad sends you back to the enemy
   base for stage 11.
 - **Music:** an original soundtrack in the spirit of the arcade board: driving
-  sixteenth-note synth bass and an 80s drum machine (gated snare) under
-  futuristic keyboard leads (detuned saw and square synths). It's synthesized
-  live with Web Audio, with no audio files. Themes are shared across stages the
+  sixteenth-note synth bass and an 80s drum machine (gated snare) under dark,
+  alien keyboard leads. The leads are squelchy wide-detuned saws that glide
+  between notes and ring out into an echo, over metallic FM chimes and a low
+  drone. The harmony stays dark: Phrygian seconds, and chords a half step or a
+  tritone apart. It's synthesized live with Web Audio, with no audio files. Themes are shared across stages the
   way the walkthrough says the original's were:
   - stage 1 has its own;
   - stages 2 and 6 share one;

@@ -28,6 +28,23 @@ export const WORLD_TUNING = {
   despawnRadius: 320,
   craterRadius: 9,
   craterSlow: 0.5,
+  /** "PLAYER 1 READY" pause at the start of a stage and after losing a life. */
+  readyTime: 1.6,
+  /** Jump zones: trigger radius (px), seconds aloft, uses each, and how far around the tank they wake enemies. */
+  jumpRadius: 14,
+  raisedTime: 5,
+  jumpUses: 3,
+  jumpWakeRadius: 300,
+  /** Stage clear: seconds of "STAGE CLEAR" before the time bonus, then before driving to the hatch. */
+  clearMessageTime: 2.2,
+  bonusMessageTime: 2.4,
+  /** Time bonus per whole second left on the clock. */
+  timeBonusPerSecond: 50,
+  /** Speed (px/s) of the automatic drive onto the exit hatch, and seconds on the hatch before dropping through. */
+  hatchDriveSpeed: 40,
+  hatchDropTime: 2.6,
+  /** Guide arrow: a waypoint counts as reached within this many px. */
+  guideReach: 72,
   /** Extra lives (a guess: the original's thresholds are unknown). */
   extendFirst: 20000,
   extendEvery: 70000,
@@ -36,6 +53,19 @@ export const WORLD_TUNING = {
 export interface StageTerrain extends Terrain, ShotTerrain {
   readonly tileSize: number;
   readonly start: { x: number; y: number };
+  readonly jumpZones?: readonly { x: number; y: number }[];
+  readonly hatch?: { x: number; y: number } | null;
+}
+
+export interface JumpZone {
+  x: number;
+  y: number;
+  usesLeft: number;
+}
+
+export interface Point {
+  x: number;
+  y: number;
 }
 
 export interface Crater {
@@ -43,7 +73,15 @@ export interface Crater {
   y: number;
 }
 
-export type WorldState = 'playing' | 'dying' | 'gameOver';
+/**
+ * ready: "PLAYER 1 READY", nothing moves.  playing: normal play (the tank may be
+ * raised on a jump zone).  dying: wrecked, before the next life.  cleared: all
+ * cannons down, showing STAGE CLEAR then the time bonus.  exiting: driving onto
+ * the hatch and dropping through.  done: the stage is over.  gameOver: no lives left.
+ */
+export type WorldState = 'ready' | 'playing' | 'dying' | 'cleared' | 'exiting' | 'done' | 'gameOver';
+
+export type DeathCause = 'hit' | 'timeUp';
 
 export type WorldEvent =
   | { type: 'fired'; what: FireEvent }
@@ -54,7 +92,12 @@ export type WorldEvent =
   | { type: 'enemyFired'; enemy: Enemy; projectile: ProjectileKind }
   | { type: 'projectileShotDown'; x: number; y: number }
   | { type: 'projectileHitWall'; x: number; y: number }
-  | { type: 'playerHit'; x: number; y: number }
+  | { type: 'playerHit'; x: number; y: number; cause: DeathCause }
+  | { type: 'raised' }
+  | { type: 'landed' }
+  | { type: 'stageClear' }
+  | { type: 'timeBonus'; seconds: number; points: number }
+  | { type: 'hatchDrop' }
   | { type: 'respawn' }
   | { type: 'gameOver' }
   | { type: 'extend' };
@@ -66,6 +109,12 @@ export interface WorldOptions {
   seed?: number;
   /** Score carried in from earlier stages. */
   score?: number;
+  /** Seconds on the clock; omit for no time limit. */
+  timeLimit?: number;
+  /** Route for the guide arrow (world coordinates). */
+  guide?: readonly Point[];
+  /** Start in the READY pause (default true). */
+  startReady?: boolean;
 }
 
 export class World {
@@ -74,10 +123,25 @@ export class World {
   readonly enemies: Enemy[] = [];
   readonly projectiles: EnemyProjectile[] = [];
   readonly craters: Crater[] = [];
-  state: WorldState = 'playing';
+  state: WorldState;
   /** Seconds since the state last changed. */
   stateTime = 0;
   invulnerable = 0;
+  /** Seconds left on the stage clock (Infinity without a time limit). */
+  timeLeft: number;
+  readonly timeLimit: number;
+  readonly jumpZones: JumpZone[];
+  /** Seconds left aloft on a jump zone, or 0 on the ground. */
+  raised = 0;
+  /** Why the last life was lost. */
+  deathCause: DeathCause = 'hit';
+  /** Time bonus awarded at the last stage clear. */
+  bonus = { seconds: 0, points: 0 };
+  private guide: Point[];
+  private guideIndex = 0;
+  /** The jump zone the tank is sitting on, which can't re-trigger until it drives off. */
+  private onZone: JumpZone | null = null;
+  private readonly hasCannons: boolean;
   score: number;
   lives: number;
   private nextExtend: number;
@@ -93,6 +157,12 @@ export class World {
     opts: WorldOptions,
   ) {
     this.tank = createTank(terrain.start.x, terrain.start.y);
+    this.state = opts.startReady === false ? 'playing' : 'ready';
+    this.timeLimit = opts.timeLimit ?? Infinity;
+    this.timeLeft = this.timeLimit;
+    this.jumpZones = (terrain.jumpZones ?? []).map((z) => ({ x: z.x, y: z.y, usesLeft: WORLD_TUNING.jumpUses }));
+    this.guide = [...(opts.guide ?? [])];
+    this.hasCannons = spawns.some((s) => s.kind === 'cannon1');
     this.lives = opts.lives;
     this.hard = opts.hard ?? false;
     this.rng = new Rng(opts.seed ?? 1);
@@ -125,26 +195,113 @@ export class World {
   step(dt: number, maneuver: Maneuver, fire: FireInput): WorldEvent[] {
     this.events = [];
     this.stateTime += dt;
+    const T = WORLD_TUNING;
 
-    if (this.state === 'dying' && this.stateTime >= WORLD_TUNING.deathDelay) {
-      if (this.lives > 0) {
-        this.setState('playing');
-        this.invulnerable = WORLD_TUNING.respawnInvulnerability;
-        this.projectiles.length = 0;
-        this.events.push({ type: 'respawn' });
-      } else {
-        this.setState('gameOver');
-        this.events.push({ type: 'gameOver' });
-      }
+    switch (this.state) {
+      case 'ready':
+        if (this.stateTime >= T.readyTime) this.setState('playing');
+        break;
+      case 'dying':
+        if (this.stateTime < T.deathDelay) break;
+        if (this.lives > 0) {
+          this.setState('ready');
+          this.invulnerable = T.respawnInvulnerability;
+          this.projectiles.length = 0;
+          if (this.deathCause === 'timeUp') this.timeLeft = this.timeLimit;
+          this.events.push({ type: 'respawn' });
+        } else {
+          this.setState('gameOver');
+          this.events.push({ type: 'gameOver' });
+        }
+        break;
+      case 'cleared':
+        if (this.bonus.points === 0 && this.stateTime >= T.clearMessageTime) this.awardTimeBonus();
+        if (this.stateTime >= T.clearMessageTime + T.bonusMessageTime) this.setState('exiting');
+        break;
+      case 'exiting':
+        this.driveToHatch(dt);
+        break;
     }
 
-    if (this.state === 'playing') this.stepPlayer(dt, maneuver, fire);
-    if (this.state !== 'gameOver') {
+    if (this.state === 'playing') {
+      this.timeLeft = Math.max(0, this.timeLeft - dt);
+      this.stepPlayer(dt, maneuver, fire);
+      if (this.state === 'playing' && this.timeLeft === 0) this.playerDies('timeUp');
+      this.advanceGuide();
+    }
+    if (this.state !== 'gameOver' && this.state !== 'ready') {
       this.stepEnemies(dt);
       this.stepProjectiles(dt);
     }
+    if (this.state === 'cleared' || this.state === 'exiting') this.stepWeaponsOnly(dt);
     this.removeDead();
+    if (this.state === 'playing' && this.hasCannons && !this.enemies.some((e) => e.kind === 'cannon1')) this.stageClear();
     return this.events;
+  }
+
+  /** Where the guide arrow points: the next waypoint on the route, then the exit hatch. */
+  get guideTarget(): Point | null {
+    if (this.guideIndex < this.guide.length) return this.guide[this.guideIndex];
+    return this.terrain.hatch ?? null;
+  }
+
+  private advanceGuide(): void {
+    const g = this.guide[this.guideIndex];
+    if (g && Math.hypot(g.x - this.tank.x, g.y - this.tank.y) < WORLD_TUNING.guideReach) this.guideIndex++;
+  }
+
+  private stageClear(): void {
+    this.setState('cleared');
+    this.raised = 0;
+    this.tank.mode = 'drive';
+    this.tank.lift = 0;
+    this.projectiles.length = 0;
+    this.bonus = { seconds: 0, points: 0 };
+    this.events.push({ type: 'stageClear' });
+  }
+
+  private awardTimeBonus(): void {
+    const seconds = Number.isFinite(this.timeLeft) ? Math.floor(this.timeLeft) : 0;
+    this.bonus = { seconds, points: seconds * WORLD_TUNING.timeBonusPerSecond };
+    if (this.bonus.points === 0) this.bonus.points = -1; // mark as awarded
+    else this.addScore(this.bonus.points);
+    this.events.push({ type: 'timeBonus', seconds, points: Math.max(0, this.bonus.points) });
+  }
+
+  /** Scripted ending: turn towards the hatch, drive onto it, then drop through. */
+  private driveToHatch(dt: number): void {
+    const h = this.terrain.hatch;
+    const t = this.tank;
+    if (!h) {
+      if (this.stateTime >= WORLD_TUNING.hatchDropTime) this.setState('done');
+      return;
+    }
+    const dist = Math.hypot(h.x - t.x, h.y - t.y);
+    if (dist > 1) {
+      const want = headingTo(t.x, t.y, h.x, h.y);
+      t.heading += clamp(angleDiff(t.heading, want), TANK_TUNING.turnRate * dt);
+      if (Math.abs(angleDiff(t.heading, want)) < 0.2) {
+        const step = Math.min(dist, WORLD_TUNING.hatchDriveSpeed * dt);
+        t.x += ((h.x - t.x) / dist) * step;
+        t.y += ((h.y - t.y) / dist) * step;
+      }
+      this.stateTime = 0;
+      if (Math.hypot(h.x - t.x, h.y - t.y) <= 1) {
+        t.x = h.x;
+        t.y = h.y;
+        this.events.push({ type: 'hatchDrop' });
+      }
+      return;
+    }
+    if (this.stateTime >= WORLD_TUNING.hatchDropTime) this.setState('done');
+  }
+
+  /** Let shells already in flight land after the stage is won. */
+  private stepWeaponsOnly(dt: number): void {
+    for (const blast of this.weapons.step(dt, this.tank, { held: false, presses: 0 }, this.terrain)) {
+      this.events.push({ type: 'blast', blast });
+    }
+    this.weapons.events.length = 0;
   }
 
   /** Wake every dormant enemy within `radius` (a jump zone lifting the tank into view). */
@@ -159,11 +316,20 @@ export class World {
 
   private stepPlayer(dt: number, maneuver: Maneuver, fire: FireInput): void {
     this.invulnerable = Math.max(0, this.invulnerable - dt);
-    const wasRolling = this.tank.mode === 'roll';
-    stepTank(this.tank, maneuver, dt, this.playerGround);
-    if (this.tank.mode === 'roll' && !wasRolling) this.events.push({ type: 'roll' });
+    const raised = this.raised > 0;
+    if (raised) {
+      // Aloft: the tank can turn to aim, but not drive, roll or wheelie.
+      this.raised = Math.max(0, this.raised - dt);
+      if (maneuver === 'turnLeft' || maneuver === 'turnRight') stepTank(this.tank, maneuver, dt, this.playerGround);
+      if (this.raised === 0) this.events.push({ type: 'landed' });
+    } else {
+      const wasRolling = this.tank.mode === 'roll';
+      stepTank(this.tank, maneuver, dt, this.playerGround);
+      if (this.tank.mode === 'roll' && !wasRolling) this.events.push({ type: 'roll' });
+      this.checkJumpZones();
+    }
 
-    const blasts = this.weapons.step(dt, this.tank, fire, this.terrain);
+    const blasts = this.weapons.step(dt, this.tank, fire, this.terrain, raised);
     for (const what of this.weapons.events) this.events.push({ type: 'fired', what });
     this.weapons.events.length = 0;
     for (const blast of blasts) {
@@ -187,6 +353,20 @@ export class World {
         this.events.push({ type: 'projectileShotDown', x: missile.x, y: missile.y });
       }
     }
+  }
+
+  private checkJumpZones(): void {
+    const t = this.tank;
+    const zone = this.jumpZones.find((z) => Math.hypot(z.x - t.x, z.y - t.y) <= WORLD_TUNING.jumpRadius);
+    if (this.onZone && zone !== this.onZone) this.onZone = null;
+    if (!zone || zone === this.onZone || zone.usesLeft === 0 || t.mode !== 'drive' || t.lift > 0) return;
+    zone.usesLeft--;
+    this.onZone = zone;
+    this.raised = WORLD_TUNING.raisedTime;
+    t.x = zone.x;
+    t.y = zone.y;
+    this.wakeAllWithin(WORLD_TUNING.jumpWakeRadius);
+    this.events.push({ type: 'raised' });
   }
 
   private applyNuke(blast: Blast): void {
@@ -325,19 +505,28 @@ export class World {
         this.events.push({ type: 'projectileHitWall', x: p.x, y: p.y });
       } else if (p.life <= 0) {
         this.projectiles.splice(i, 1);
-      } else if (this.state === 'playing' && this.invulnerable === 0 && Math.hypot(p.x - t.x, p.y - t.y) <= spec.radius + hitRadius) {
+      } else if (
+        this.state === 'playing' &&
+        this.invulnerable === 0 &&
+        this.raised === 0 &&
+        Math.hypot(p.x - t.x, p.y - t.y) <= spec.radius + hitRadius
+      ) {
         this.projectiles.splice(i, 1);
-        this.playerHit();
+        this.playerDies('hit');
       }
     }
   }
 
-  private playerHit(): void {
+  private playerDies(cause: DeathCause): void {
     this.lives--;
+    this.deathCause = cause;
+    this.raised = 0;
+    this.tank.mode = 'drive';
+    this.tank.lift = 0;
     this.setState('dying');
     this.weapons.shots.length = 0;
     this.weapons.nukes.length = 0;
-    this.events.push({ type: 'playerHit', x: this.tank.x, y: this.tank.y });
+    this.events.push({ type: 'playerHit', x: this.tank.x, y: this.tank.y, cause });
   }
 
   private removeDead(): void {

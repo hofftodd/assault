@@ -31,16 +31,16 @@ const types = (events: WorldEvent[]) => events.map((e) => e.type);
 
 describe('enemies waking and moving', () => {
   it('stay dormant until the player comes within range', () => {
-    const w = new World(field(), [{ kind: 'type1', tx: 50, ty: 10 }], { lives: 3 });
+    const w = new World(field(), [{ kind: 'type1', tx: 50, ty: 10 }], { startReady: false, lives: 3 });
     run(w, 1);
     expect(w.enemies[0].state).toBe('dormant');
-    const near = new World(field(), [{ kind: 'type1', tx: 50, ty: 42 }], { lives: 3 });
+    const near = new World(field(), [{ kind: 'type1', tx: 50, ty: 42 }], { startReady: false, lives: 3 });
     run(near, DT);
     expect(near.enemies[0].state).toBe('active');
   });
 
   it('roll towards the player and stop at their preferred range', () => {
-    const w = new World(field(), [{ kind: 'type1', tx: 50, ty: 40 }], { lives: 3, seed: 2 });
+    const w = new World(field(), [{ kind: 'type1', tx: 50, ty: 40 }], { startReady: false, lives: 3, seed: 2 });
     w.invulnerable = 1e9;
     run(w, 6);
     const e = w.enemies[0];
@@ -50,13 +50,13 @@ describe('enemies waking and moving', () => {
   });
 
   it('can be woken all at once (jump zones)', () => {
-    const w = new World(field(), [{ kind: 'torchika1', tx: 50, ty: 30 }, { kind: 'torchika1', tx: 50, ty: 5 }], { lives: 3 });
+    const w = new World(field(), [{ kind: 'torchika1', tx: 50, ty: 30 }, { kind: 'torchika1', tx: 50, ty: 5 }], { startReady: false, lives: 3 });
     w.wakeAllWithin(800);
     expect(w.enemies.map((e) => e.state)).toEqual(['active', 'active']);
   });
 
   it('disappear once the player is far away', () => {
-    const w = new World(field(), [{ kind: 'torchika1', tx: 50, ty: 45 }], { lives: 3 });
+    const w = new World(field(), [{ kind: 'torchika1', tx: 50, ty: 45 }], { startReady: false, lives: 3 });
     w.invulnerable = 1e9;
     run(w, DT);
     expect(w.enemies[0].state).toBe('active');
@@ -69,7 +69,7 @@ describe('enemies waking and moving', () => {
 describe('enemy fire', () => {
   it('torchikas fire rings of shots in 4 or 8 directions', () => {
     for (const [kind, count] of [['torchika1', 4], ['torchika2', 8]] as const) {
-      const w = new World(field(), [{ kind, tx: 50, ty: 45 }], { lives: 3 });
+      const w = new World(field(), [{ kind, tx: 50, ty: 45 }], { startReady: false, lives: 3 });
       w.invulnerable = 1e9;
       const fired = run(w, ENEMIES[kind].fireInterval * 1.5).find((e) => e.type === 'enemyFired');
       expect(fired, kind).toBeDefined();
@@ -78,23 +78,23 @@ describe('enemy fire', () => {
   });
 
   it('destroys the player in one hit, then respawns them with a spare life', () => {
-    const w = new World(field(), [{ kind: 'torchika1', tx: 50, ty: 46 }], { lives: 3 });
+    const w = new World(field(), [{ kind: 'torchika1', tx: 50, ty: 46 }], { startReady: false, lives: 3 });
     const events = run(w, 4);
     expect(types(events)).toContain('playerHit');
     expect(w.lives).toBe(2);
     expect(types(events)).toContain('respawn');
-    expect(w.state).toBe('playing');
+    expect(['ready', 'playing']).toContain(w.state);
     expect(w.projectiles).toHaveLength(0);
   });
 
   it('protects the player briefly after respawning', () => {
-    const w = new World(field(), [{ kind: 'torchika2', tx: 50, ty: 46 }], { lives: 3 });
+    const w = new World(field(), [{ kind: 'torchika2', tx: 50, ty: 46 }], { startReady: false, lives: 3 });
     const events = run(w, 3.5);
     expect(types(events).filter((t) => t === 'playerHit')).toHaveLength(1);
   });
 
   it('ends the game when the last life is lost', () => {
-    const w = new World(field(), [{ kind: 'torchika2', tx: 50, ty: 46 }], { lives: 1 });
+    const w = new World(field(), [{ kind: 'torchika2', tx: 50, ty: 46 }], { startReady: false, lives: 1 });
     const events = run(w, WORLD_TUNING.deathDelay + 2);
     expect(types(events)).toContain('gameOver');
     expect(w.state).toBe('gameOver');
@@ -105,7 +105,7 @@ describe('enemy fire', () => {
   });
 
   it('missiles home in on the player', () => {
-    const w = new World(field(), [{ kind: 'type5', tx: 44, ty: 44, facing: 135 }], { lives: 3 });
+    const w = new World(field(), [{ kind: 'type5', tx: 44, ty: 44, facing: 135 }], { startReady: false, lives: 3 });
     w.invulnerable = 1e9;
     let missile = undefined;
     for (let i = 0; i < 600 && !missile; i++) {
@@ -124,7 +124,7 @@ describe('damaging enemies', () => {
   const ahead = (kind: Spawn['kind'], tiles = 5): Spawn => ({ kind, tx: 50, ty: 50 - tiles });
 
   it('shots destroy a one-hit tank and score its points', () => {
-    const w = new World(field(), [ahead('torchika1')], { lives: 3 });
+    const w = new World(field(), [ahead('torchika1')], { startReady: false, lives: 3 });
     w.invulnerable = 1e9;
     w.step(DT, 'idle', FIRE);
     const events = run(w, 0.6);
@@ -135,7 +135,7 @@ describe('damaging enemies', () => {
   });
 
   it('tougher enemies take several shots', () => {
-    const w = new World(field(), [ahead('cannon1', 7)], { lives: 3 });
+    const w = new World(field(), [ahead('cannon1', 7)], { startReady: false, lives: 3 });
     w.invulnerable = 1e9;
     let kills = 0;
     let hits = 0;
@@ -150,7 +150,7 @@ describe('damaging enemies', () => {
   });
 
   it('uses the higher hit counts on hard stages', () => {
-    const w = new World(field(), [ahead('type2')], { lives: 3, hard: true });
+    const w = new World(field(), [ahead('type2')], { startReady: false, lives: 3, hard: true });
     expect(w.enemies[0].hp).toBe(ENEMIES.type2.hits[1]);
   });
 
@@ -160,7 +160,7 @@ describe('damaging enemies', () => {
       field(),
       // Pillboxes stay put while the crosshair slides out.
       [ahead('torchika1', range), { kind: 'torchika2', tx: 51, ty: 50 - range }, { kind: 'type5', tx: 50, ty: 50 - range - 40 }],
-      { lives: 3 },
+      { startReady: false, lives: 3 },
     );
     w.invulnerable = 1e9;
     // Rear up and let the crosshair slide out to full range before firing.
@@ -172,7 +172,7 @@ describe('damaging enemies', () => {
   });
 
   it('destroyed tanks leave craters that slow the player', () => {
-    const w = new World(field(), [ahead('type1', 2)], { lives: 3 });
+    const w = new World(field(), [ahead('type1', 2)], { startReady: false, lives: 3 });
     w.invulnerable = 1e9;
     const e = w.enemies[0];
     w.step(DT, 'idle', FIRE);
@@ -189,7 +189,7 @@ describe('damaging enemies', () => {
   });
 
   it('player shots can knock down missiles', () => {
-    const w = new World(field(), [], { lives: 3 });
+    const w = new World(field(), [], { startReady: false, lives: 3 });
     w.projectiles.push({ kind: 'missile', x: w.tank.x, y: w.tank.y - 40, heading: Math.PI, life: 4 });
     w.invulnerable = 1e9;
     w.step(DT, 'idle', FIRE);
@@ -198,10 +198,107 @@ describe('damaging enemies', () => {
   });
 
   it('awards extra lives at score thresholds', () => {
-    const w = new World(field(), [ahead('torchika1')], { lives: 3, score: WORLD_TUNING.extendFirst - 100 });
+    const w = new World(field(), [ahead('torchika1')], { startReady: false, lives: 3, score: WORLD_TUNING.extendFirst - 100 });
     w.invulnerable = 1e9;
     w.step(DT, 'idle', FIRE);
     expect(types(run(w, 0.6))).toContain('extend');
     expect(w.lives).toBe(4);
+  });
+});
+
+describe('stage flow', () => {
+  const cannons: Spawn[] = [{ kind: 'cannon1', tx: 50, ty: 46 }];
+  const killAll = (w: World) => {
+    for (const e of w.enemies) e.hp = 0.001;
+    w.step(DT, 'idle', FIRE);
+    run(w, 0.6);
+  };
+
+  it('starts with a READY pause in which nothing moves', () => {
+    const w = new World(field(), [{ kind: 'type1', tx: 50, ty: 46 }], { lives: 3 });
+    expect(w.state).toBe('ready');
+    run(w, 1, 'forward');
+    expect(w.tank.y).toBe(50.5 * TILE);
+    run(w, WORLD_TUNING.readyTime);
+    expect(w.state).toBe('playing');
+  });
+
+  it('counts the clock down and costs a life at time up, restarting the clock', () => {
+    const w = new World(field(), [], { startReady: false, lives: 3, timeLimit: 2 });
+    const events = run(w, 2.1);
+    expect(events.find((e) => e.type === 'playerHit')).toMatchObject({ cause: 'timeUp' });
+    expect(w.lives).toBe(2);
+    run(w, WORLD_TUNING.deathDelay + 0.1);
+    expect(w.timeLeft).toBe(2);
+  });
+
+  it('clears the stage when every cannon is destroyed, then pays 50 points per second left', () => {
+    const w = new World(field(), cannons, { startReady: false, lives: 3, timeLimit: 100 });
+    w.invulnerable = 1e9;
+    w.enemies[0].hp = 1;
+    const shooter = w.enemies[0];
+    w.tank.heading = 0;
+    w.tank.y = shooter.y + 60;
+    w.step(DT, 'idle', FIRE);
+    const ev = run(w, 0.6);
+    expect(types(ev)).toContain('stageClear');
+    expect(w.state).toBe('cleared');
+    const left = Math.floor(w.timeLeft);
+    const bonus = run(w, WORLD_TUNING.clearMessageTime).find((e) => e.type === 'timeBonus');
+    expect(bonus).toMatchObject({ seconds: left, points: left * 50 });
+    expect(w.score).toBe(1200 + left * 50);
+  });
+
+  it('then drives onto the exit hatch and drops through', () => {
+    const terrain = { ...field(), hatch: { x: 50.5 * TILE, y: 40.5 * TILE } };
+    const w = new World(terrain, cannons, { startReady: false, lives: 3, timeLimit: 100 });
+    killAll(w);
+    const events = run(w, WORLD_TUNING.clearMessageTime + WORLD_TUNING.bonusMessageTime + 8);
+    expect(types(events)).toContain('hatchDrop');
+    expect(w.state).toBe('done');
+    expect(w.tank.x).toBeCloseTo(terrain.hatch.x);
+    expect(w.tank.y).toBeCloseTo(terrain.hatch.y);
+  });
+
+  it('a jump zone raises the tank: safe from fire, wakes enemies, nukes without recharge', () => {
+    const terrain = { ...field(), jumpZones: [{ x: 50.5 * TILE, y: 48.5 * TILE }] };
+    const w = new World(terrain, [{ kind: 'torchika2', tx: 50, ty: 36 }], { startReady: false, lives: 3 });
+    const ev = run(w, 1, 'forward');
+    expect(types(ev)).toContain('raised');
+    expect(w.raised).toBeGreaterThan(0);
+    expect(w.enemies[0].state).toBe('active');
+    const hits = run(w, 3).filter((e) => e.type === 'playerHit');
+    expect(hits).toHaveLength(0);
+    let nukes = 0;
+    for (let i = 0; i < 3; i++) {
+      nukes += w.step(DT, 'idle', FIRE).filter((e) => e.type === 'fired' && e.what === 'nuke').length;
+      run(w, 0.25);
+    }
+    expect(nukes).toBe(3);
+  });
+
+  it('jump zones work three times, and only after driving off and back on', () => {
+    const z = { x: 50.5 * TILE, y: 48.5 * TILE };
+    const w = new World({ ...field(), jumpZones: [z] }, [], { startReady: false, lives: 3 });
+    let raises = 0;
+    for (let i = 0; i < 5; i++) {
+      w.tank.x = z.x;
+      w.tank.y = z.y + 60;
+      w.tank.heading = 0;
+      raises += types(run(w, 1.6, 'forward')).filter((t) => t === 'raised').length;
+      run(w, WORLD_TUNING.raisedTime + 0.1);
+      run(w, 0.4, 'forward');
+    }
+    expect(raises).toBe(3);
+    expect(w.jumpZones[0].usesLeft).toBe(0);
+  });
+
+  it('leads the guide arrow along the route, then to the hatch', () => {
+    const hatch = { x: 50.5 * TILE, y: 10 * TILE };
+    const guide = [{ x: 50.5 * TILE, y: 40 * TILE }];
+    const w = new World({ ...field(), hatch }, [], { startReady: false, lives: 3, guide });
+    expect(w.guideTarget).toEqual(guide[0]);
+    run(w, 3, 'forward');
+    expect(w.guideTarget).toEqual(hatch);
   });
 });

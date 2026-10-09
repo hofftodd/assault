@@ -23,8 +23,8 @@ try {
   page.on('pageerror', (e) => errors.push(String(e)));
 
   // Phase 1: controls and weapons, with no enemies around.
-  await page.goto('http://localhost:4173/?peaceful');
-  await page.waitForFunction(() => window.__assault?.tank, null, { timeout: 15000 });
+  await page.goto('http://localhost:4173/?map=test&peaceful');
+  await page.waitForFunction(() => window.__assault?.world?.state === 'playing', null, { timeout: 15000 });
   const tank = () => page.evaluate(() => ({ ...window.__assault.tank }));
   const hold = async (keys, ms) => {
     for (const k of keys) await page.keyboard.down(k);
@@ -113,8 +113,8 @@ try {
   check((await blastKinds()).includes('nuke'), 'the nuke explodes where it lands');
 
   // Phase 2: combat against the test map's enemies.
-  await page.goto('http://localhost:4173/');
-  await page.waitForFunction(() => window.__assault?.world, null, { timeout: 15000 });
+  await page.goto('http://localhost:4173/?map=test');
+  await page.waitForFunction(() => window.__assault?.world?.state === 'playing', null, { timeout: 15000 });
   const world = () =>
     page.evaluate(() => {
       const w = window.__assault.world;
@@ -144,9 +144,75 @@ try {
   await page.waitForFunction(() => window.__assault.world.state === 'gameOver', null, { timeout: 5000 }).catch(() => {});
   check((await world()).state === 'gameOver', 'losing the last life ends the game');
   await shot('10-game-over');
-  await page.waitForFunction(() => window.__assault.world.state === 'playing' && window.__assault.world.lives === 3, null, { timeout: 8000 }).catch(() => {});
-  const fresh = await world();
-  check(fresh.state === 'playing' && fresh.lives === 3 && fresh.score === 0 && fresh.enemies.length === 18, 'a fresh game starts after GAME OVER');
+
+  await page.waitForFunction(() => window.__assault.scene === 'title', null, { timeout: 8000 }).catch(() => {});
+  check(await page.evaluate(() => window.__assault.scene === 'title'), 'after GAME OVER the title screen returns');
+
+  // Phase 3: stage 1 from the title screen, through to the stage clear and high-score entry.
+  await page.goto('http://localhost:4173/');
+  await page.waitForFunction(() => window.__assault?.scene === 'title', null, { timeout: 15000 });
+  await page.waitForTimeout(400);
+  await shot('11-title');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__assault?.scene === 'game', null, { timeout: 5000 });
+  await page.waitForTimeout(500);
+  await shot('12-stage1-ready');
+  await page.waitForFunction(() => window.__assault.world.state === 'playing', null, { timeout: 5000 });
+  const s1 = await page.evaluate(() => ({ stage: window.__assault.stage, time: window.__assault.world.timeLeft, zones: window.__assault.world.jumpZones.length, cannons: window.__assault.world.enemies.filter((e) => e.kind === 'cannon1').length }));
+  check(s1.stage === 1 && s1.time > 130 && s1.time <= 135 && s1.zones === 1 && s1.cannons === 2, `stage 1 starts with a 2:15 clock, a jump zone and two cannons (${JSON.stringify(s1)})`);
+  await page.waitForTimeout(800);
+  await shot('13-stage1-playing');
+
+  // Ride the jump zone up.
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    const z = w.jumpZones[0];
+    w.invulnerable = 1e9;
+    Object.assign(w.tank, { x: z.x, y: z.y + 30, heading: 0 });
+  });
+  await hold(['KeyW', 'KeyI'], 900);
+  await release(['KeyW', 'KeyI']);
+  const up = await page.evaluate(() => ({ raised: window.__assault.world.raised, uses: window.__assault.world.jumpZones[0].usesLeft }));
+  check(up.raised > 0 && up.uses === 2, `driving onto the jump zone raises the tank (${JSON.stringify(up)})`);
+  await page.waitForTimeout(500);
+  await shot('14-raised');
+
+  // Clear the stage: a big score to qualify for the table, then the cannons fall.
+  await page.waitForFunction(() => window.__assault.world.raised === 0, null, { timeout: 8000 });
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.score = 50000;
+    const h = w.terrain.hatch;
+    Object.assign(w.tank, { x: h.x, y: h.y + 80, heading: 0 });
+    for (let i = w.enemies.length - 1; i >= 0; i--) if (w.enemies[i].kind === 'cannon1') w.enemies.splice(i, 1);
+  });
+  await page.waitForFunction(() => window.__assault.world.state === 'cleared', null, { timeout: 3000 }).catch(() => {});
+  check((await page.evaluate(() => window.__assault.world.state)) === 'cleared', 'destroying both cannons clears the stage');
+  await page.waitForTimeout(600);
+  await shot('15-stage-clear');
+  await page.waitForTimeout(2400);
+  const bonus = await page.evaluate(() => window.__assault.world.bonus);
+  check(bonus.points === bonus.seconds * 50 && bonus.seconds > 0, `time bonus pays 50 per second (${bonus.seconds} s, ${bonus.points} pts)`);
+  await shot('16-time-bonus');
+  await page.waitForFunction(() => window.__assault.world.state === 'exiting', null, { timeout: 5000 });
+  await page.waitForTimeout(1500);
+  await shot('17-hatch');
+  await page.waitForFunction(() => window.__assault.world.state === 'done', null, { timeout: 12000 }).catch(() => {});
+  check((await page.evaluate(() => window.__assault.world.state)) === 'done', 'the tank drives onto the hatch and drops through');
+  await page.waitForTimeout(800);
+  await shot('18-after-stage');
+
+  await page.waitForFunction(() => window.__assault.scene === 'nameEntry', null, { timeout: 12000 }).catch(() => {});
+  check(await page.evaluate(() => window.__assault.scene === 'nameEntry'), 'a top score leads to name entry');
+  await page.keyboard.type('TODD');
+  await page.waitForTimeout(300);
+  await shot('19-name-entry');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__assault.scene === 'title', null, { timeout: 5000 }).catch(() => {});
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('assault.highScores.v1') ?? '[]'));
+  check(saved[0]?.name === 'TODD' && saved[0]?.score >= 50000, `the new top score is saved (${JSON.stringify(saved[0])})`);
+  await page.waitForTimeout(7300);
+  await shot('20-record-table');
 
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {

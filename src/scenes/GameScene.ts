@@ -4,12 +4,14 @@ import { addRgbaTexture } from '../art/textures';
 import type { Sfx } from '../audio/sfx';
 import { DEFAULT_BINDINGS } from '../input/bindings';
 import { KeyboardLevers } from '../input/keyboardLevers';
-import { SESSION_KEY, SFX_KEY, STARTING_LIVES, type Session } from '../session';
-import type { Enemy, EnemyKind } from '../sim/enemies';
+import { rankFor } from '../highScores';
+import { SESSION_KEY, SFX_KEY, type Session } from '../session';
+import { ENEMIES, headingTo, type Enemy, type EnemyKind } from '../sim/enemies';
 import { forwardVector, rollProgress } from '../sim/tank';
 import { TileTerrain } from '../sim/terrain';
 import { nukePosition, WEAPON_TUNING, type Blast } from '../sim/weapons';
-import { World, type Crater, type WorldEvent } from '../sim/world';
+import { World, WORLD_TUNING, type Crater, type JumpZone, type WorldEvent } from '../sim/world';
+import { STAGES, type StageDef } from '../stages/stages';
 import { TEST_MAP, TEST_SPAWNS } from '../stages/testMap';
 
 /** Simulation tick, decoupled from the display refresh rate. */
@@ -23,12 +25,22 @@ export const TANK_SCREEN_Y = 225;
 const SHADOW_X = -2;
 const SHADOW_Y = -3;
 
-/** Seconds the GAME OVER banner shows before a fresh game starts. */
+/** Seconds the GAME OVER banner shows before moving on. */
 const GAME_OVER_HOLD = 4;
+/** Seconds the end-of-content message shows after the last stage. */
+const ENDING_HOLD = 7;
+/** Camera zoom while raised on a jump zone. */
+const RAISED_ZOOM = 0.55;
+
+/** The proving-ground map (?map=test): no clock, no cannons. */
+const TEST_STAGE: StageDef = { number: 0, area: 'TEST', timeLimit: Infinity, hard: false, seed: 1, map: [...TEST_MAP], guide: [] };
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
 
 const enum Depth {
   Terrain = 0,
   Crater = 1,
+  Pad = 1.5,
   Shadow = 2,
   Enemy = 3,
   Tank = 4,
@@ -63,6 +75,12 @@ export class GameScene extends Phaser.Scene {
   private projectileSprites: Phaser.GameObjects.Image[] = [];
   private enemyViews = new Map<number, EnemyView>();
   private craterViews = new Map<Crater, Phaser.GameObjects.Image>();
+  private zoneViews = new Map<JumpZone, Phaser.GameObjects.Image>();
+  private stage!: StageDef;
+  private testMap = false;
+  /** Seconds since the last stage finished, while showing the end-of-content message. */
+  private endingTime = -1;
+  private leaving = false;
   private acc = 0;
 
   constructor() {
@@ -78,15 +96,35 @@ export class GameScene extends Phaser.Scene {
     this.projectileSprites = [];
     this.enemyViews = new Map();
     this.craterViews = new Map();
+    this.zoneViews = new Map();
+    this.endingTime = -1;
+    this.leaving = false;
     this.acc = 0;
 
-    const terrain = new TileTerrain(TEST_MAP, 16, 1);
-    if (!this.textures.exists('terrain')) addRgbaTexture(this, 'terrain', renderTerrain(terrain));
-    this.add.image(0, 0, 'terrain').setOrigin(0, 0).setDepth(Depth.Terrain);
+    // ?map=test plays the proving ground; ?peaceful removes the enemies.
+    const params = new URLSearchParams(window.location.search);
+    this.testMap = params.get('map') === 'test';
+    this.stage = this.testMap ? TEST_STAGE : STAGES[this.session.stageIndex];
+    const st = this.stage;
+    if (!this.testMap) this.session.stageReached = pad2(st.number);
 
-    // ?peaceful starts without enemies (handy for testing controls).
-    const spawns = new URLSearchParams(window.location.search).has('peaceful') ? [] : TEST_SPAWNS;
-    this.world = new World(terrain, spawns, { lives: this.session.lives, score: this.session.score, seed: Date.now() });
+    const terrain = new TileTerrain(st.map, 16, st.seed);
+    const key = `terrain-${st.number}`;
+    if (!this.textures.exists(key)) addRgbaTexture(this, key, renderTerrain(terrain));
+    this.add.image(0, 0, key).setOrigin(0, 0).setDepth(Depth.Terrain);
+    if (terrain.hatch) this.add.image(terrain.hatch.x, terrain.hatch.y, 'hatch').setDepth(Depth.Pad);
+
+    const spawns = params.has('peaceful') ? [] : this.testMap ? TEST_SPAWNS : terrain.spawns;
+    const tile = (p: [number, number]) => ({ x: (p[0] + 0.5) * 16, y: (p[1] + 0.5) * 16 });
+    this.world = new World(terrain, spawns, {
+      lives: this.session.lives,
+      score: this.session.score,
+      seed: Date.now(),
+      hard: st.hard,
+      timeLimit: st.timeLimit,
+      guide: st.guide.map(tile),
+    });
+    for (const z of this.world.jumpZones) this.zoneViews.set(z, this.add.image(z.x, z.y, 'jumpZone').setDepth(Depth.Pad));
     this.tankShadow = this.add.image(0, 0, 'tank').setTintFill(0x000000).setAlpha(0.35).setDepth(Depth.Shadow);
     this.tankSprite = this.add.image(0, 0, 'tank').setDepth(Depth.Tank);
     this.crosshair = this.add.image(0, 0, 'crosshair').setDepth(Depth.Crosshair).setVisible(false);
@@ -94,6 +132,8 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x000000);
     cam.setOrigin(TANK_SCREEN_X / cam.width, TANK_SCREEN_Y / cam.height);
+    cam.setZoom(1);
+    cam.fadeIn(400);
 
     this.levers = new KeyboardLevers(window, DEFAULT_BINDINGS);
     window.addEventListener('keydown', this.onKey);
@@ -104,6 +144,8 @@ export class GameScene extends Phaser.Scene {
 
     (window as unknown as { __assault: unknown }).__assault = {
       game: this.game,
+      scene: 'game',
+      stage: st.number,
       world: this.world,
       tank: this.world.tank,
       weapons: this.world.weapons,
@@ -114,6 +156,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
+    if (this.leaving) return;
     let presses = this.levers.consumeFirePresses();
     this.levers.consumeStartPresses();
     this.acc += Math.min(delta, 250) / 1000;
@@ -123,24 +166,98 @@ export class GameScene extends Phaser.Scene {
       this.acc -= STEP;
     }
 
-    if (this.world.state === 'gameOver' && this.world.stateTime >= GAME_OVER_HOLD) {
-      this.session.topScore = Math.max(this.session.topScore, this.world.score);
-      this.session.score = 0;
-      this.session.lives = STARTING_LIVES;
-      this.scene.restart();
-      return;
+    const w = this.world;
+    this.session.score = w.score;
+    this.session.lives = w.lives;
+    this.session.topScore = Math.max(this.session.topScore, w.score);
+
+    if (w.state === 'gameOver' && w.stateTime >= GAME_OVER_HOLD) return this.finishGame();
+    if (w.state === 'done') {
+      if (this.endingTime < 0) this.stageDone();
+      else if ((this.endingTime += delta / 1000) >= ENDING_HOLD) return this.finishGame();
     }
 
-    this.session.score = this.world.score;
-    this.session.lives = this.world.lives;
+    this.updateHud();
     Object.assign(this.session.debug, {
       left: this.levers.left.dir,
       right: this.levers.right.dir,
       maneuver: this.levers.maneuver,
-      mode: this.world.tank.mode,
-      nukeCooldown: this.world.weapons.nukeCooldown,
+      mode: w.tank.mode,
+      nukeCooldown: w.weapons.nukeCooldown,
     });
     this.syncView();
+  }
+
+  /** Move on after the hatch drop: the next stage, or the end of what's built so far. */
+  private stageDone(): void {
+    const next = this.session.stageIndex + 1;
+    if (!this.testMap && next < STAGES.length) {
+      this.session.stageIndex = next;
+      this.leaving = true;
+      this.scene.restart();
+      return;
+    }
+    this.endingTime = 0;
+  }
+
+  /** Leave the game: high-score entry if the score made the table, otherwise the title screen. */
+  private finishGame(): void {
+    this.leaving = true;
+    this.session.message = null;
+    this.session.clock = null;
+    this.session.guideAngle = null;
+    this.scene.stop('hud');
+    const qualifies = rankFor(this.session.highScores, this.session.score) >= 0;
+    this.scene.start(qualifies ? 'nameEntry' : 'title');
+  }
+
+  /** Banner text, clock and guide arrow for the HUD scene. */
+  private updateHud(): void {
+    const w = this.world;
+    const T = WORLD_TUNING;
+    const s = this.session;
+    switch (w.state) {
+      case 'ready':
+        s.message = 'PLAYER\n\n1\n\nREADY';
+        break;
+      case 'dying':
+        s.message = w.deathCause === 'timeUp' ? 'PLAYER 1UP\n\nTIME UP' : 'YOU WERE HIT';
+        break;
+      case 'cleared':
+        s.message =
+          w.stateTime < T.clearMessageTime
+            ? `PLAYER 1UP\n\n\nSTAGE ${pad2(this.stage.number)} CLEAR`
+            : `TIME BONUS!\n\n${w.bonus.seconds}*50 POINTS\n\n= ${Math.max(0, w.bonus.points)} POINTS`;
+        break;
+      case 'exiting':
+        s.message = 'NOW YOU ASSAULT ON\n\nNEXT STAGE!!';
+        break;
+      case 'done':
+        s.message = 'CONGRATULATIONS!\n\nSTAGE 01 IS YOURS.\n\n\nMORE STAGES ARE\n\nON THE WAY...';
+        break;
+      case 'gameOver':
+        s.message = 'GAME OVER';
+        break;
+      default:
+        s.message = null;
+    }
+
+    // The clock appears under 100 seconds; it flashes red at 60 and 30 and stays red for the last 10.
+    const t = w.timeLeft;
+    const showClock = Number.isFinite(t) && t < 100 && w.state !== 'done' && w.state !== 'gameOver';
+    s.clock = showClock ? Math.floor(t) : null;
+    const blink = Math.floor(t * 4) % 2 === 0;
+    s.clockRed = t <= 10 || ((t <= 60 && t > 57) || (t <= 30 && t > 27)) && blink;
+
+    // Guide arrow: shown when the route turns away from the tank's heading, and every few seconds anyway.
+    const g = w.guideTarget;
+    s.guideAngle = null;
+    if (g && w.state === 'playing' && w.raised === 0) {
+      let a = headingTo(w.tank.x, w.tank.y, g.x, g.y) - w.tank.heading;
+      a = Math.atan2(Math.sin(a), Math.cos(a));
+      const flash = this.time.now % 5000 < 1600;
+      if (Math.abs(a) > 0.6 || flash) s.guideAngle = a;
+    }
   }
 
   private handle(e: WorldEvent): void {
@@ -168,7 +285,12 @@ export class GameScene extends Phaser.Scene {
         this.sfx.play('armorHit');
         break;
       case 'enemyKilled':
-        this.explosion(e.enemy.x, e.enemy.y, e.enemy.kind === 'type5' || e.enemy.kind === 'cannon1' ? 'blastAnim' : 'boomAnim');
+        if (ENEMIES[e.enemy.kind].large) {
+          this.explosion(e.enemy.x, e.enemy.y, 'blastAnim');
+          this.cameras.main.flash(70, 255, 255, 255);
+        } else {
+          this.explosion(e.enemy.x, e.enemy.y, 'boomAnim');
+        }
         this.sfx.play('enemyDie');
         break;
       case 'enemyFired':
@@ -182,18 +304,46 @@ export class GameScene extends Phaser.Scene {
         this.explosion(e.x, e.y, 'blastAnim');
         this.cameras.main.shake(400, 0.02);
         this.sfx.play('playerDie');
-        this.session.message = 'YOU WERE HIT';
+        this.zoomTo(1);
         break;
-      case 'respawn':
-        this.session.message = null;
+      case 'raised':
+        this.sfx.play('raise');
+        this.zoomTo(RAISED_ZOOM);
         break;
-      case 'gameOver':
-        this.session.message = 'GAME OVER';
+      case 'landed':
+        this.zoomTo(1);
+        break;
+      case 'stageClear':
+        this.sfx.play('clear');
+        this.zoomTo(1);
+        break;
+      case 'timeBonus':
+        if (e.points > 0) this.sfx.play('extend');
+        break;
+      case 'hatchDrop':
+        this.sfx.play('hatch');
+        this.hatchDrop();
         break;
       case 'extend':
         this.sfx.play('extend');
         break;
     }
+  }
+
+  private zoomTo(zoom: number): void {
+    this.tweens.killTweensOf(this.cameras.main);
+    this.tweens.add({ targets: this.cameras.main, zoom, duration: 600, ease: 'Sine.easeInOut' });
+  }
+
+  /** The hatch iris opens beneath the tank, which sinks through, then the screen fades out. */
+  private hatchDrop(): void {
+    const h = this.world.terrain.hatch;
+    if (!h) return;
+    const hole = this.add.circle(h.x, h.y, 1, 0x000000).setDepth(Depth.Pad + 0.1);
+    this.tweens.add({ targets: hole, radius: 13, duration: 700, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: [this.tankSprite], scale: 0.3, delay: 700, duration: 900, ease: 'Cubic.easeIn' });
+    this.cameras.main.fadeOut(600, 0, 0, 0);
+    this.time.delayedCall(1700, () => this.cameras.main.fadeIn(1));
   }
 
   /** As in the original: the screen dims while a white ring sweeps out over the blast area. */
@@ -226,20 +376,35 @@ export class GameScene extends Phaser.Scene {
     const fwd = forwardVector(t.heading);
     const rear = t.lift * 3;
     // Hidden while wrecked; blinking while invulnerable after returning.
-    const visible = w.state === 'playing' && (w.invulnerable === 0 || Math.floor(w.invulnerable * 10) % 2 === 0);
+    const shown = w.state === 'playing' || w.state === 'ready' || w.state === 'cleared' || w.state === 'exiting';
+    const visible = shown && (w.invulnerable === 0 || Math.floor(w.invulnerable * 10) % 2 === 0);
+    // Raised on a jump zone: the tank looms larger and its shadow falls far away.
+    const height = w.raised > 0 ? 1 : 0;
 
-    for (const img of [this.tankSprite, this.tankShadow]) {
-      img.setRotation(t.heading).setVisible(visible);
-      img.setScale(Math.max(0.12, Math.abs(flip)), 1 - 0.22 * t.lift);
+    if (w.state !== 'done') {
+      for (const img of [this.tankSprite, this.tankShadow]) {
+        img.setRotation(t.heading).setVisible(visible);
+        if (w.state !== 'exiting') img.setScale(Math.max(0.12, Math.abs(flip)) * (1 + height * 0.25), (1 - 0.22 * t.lift) * (1 + height * 0.25));
+      }
+    } else {
+      this.tankSprite.setVisible(false);
+      this.tankShadow.setVisible(false);
     }
     this.tankSprite.setTexture(flip < 0 ? 'tankBelly' : 'tank');
     this.tankSprite.setPosition(t.x + fwd.x * rear, t.y + fwd.y * rear);
-    const lifted = 1 + hop / 3 + t.lift * 1.5;
-    this.tankShadow.setPosition(t.x + SHADOW_X * lifted, t.y + SHADOW_Y * lifted);
+    const lifted = 1 + hop / 3 + t.lift * 1.5 + height * 6;
+    this.tankShadow.setPosition(t.x + SHADOW_X * lifted, t.y + SHADOW_Y * lifted).setVisible(visible && w.state !== 'exiting');
+
+    for (const [z, img] of this.zoneViews) {
+      if (z.usesLeft === 0) img.setTexture('jumpZoneSpent').clearTint();
+      else if (Math.floor(this.time.now / 250) % 2) img.setTint(0xffb0b0);
+      else img.clearTint();
+    }
 
     // Nuke aim: the crosshair slides out from the tank, white, and turns red at full range.
     const wpn = w.weapons;
     this.crosshair.setVisible(w.state === 'playing' && wpn.aiming);
+    this.crosshair.setScale(1 / this.cameras.main.zoom);
     if (wpn.aiming) {
       const c = wpn.crosshair(t);
       this.crosshair.setPosition(c.x, c.y).setRotation(t.heading);

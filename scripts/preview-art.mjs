@@ -63,8 +63,10 @@ try {
   const { renderTerrain } = await load('/src/art/terrainRender.ts');
   const { renderExplosion } = await load('/src/art/explosions.ts');
   const enemy = await load('/src/art/enemySprites.ts');
+  const stageArt = await load('/src/art/stageArt.ts');
   const { TileTerrain } = await load('/src/sim/terrain.ts');
   const { TEST_MAP } = await load('/src/stages/testMap.ts');
+  const { STAGES } = await load('/src/stages/stages.ts');
 
   const write = (name, img, scale) => {
     writeFileSync(join(outDir, name), png(img, scale));
@@ -88,9 +90,20 @@ try {
   write('bullet_pink.png', enemy.bulletArt('pink'), 8);
   write('missile.png', enemy.missileArt(), 8);
   write('crater.png', enemy.craterArt(), 8);
+  write('jump_zone.png', stageArt.jumpZoneArt(false), 4);
+  write('jump_zone_spent.png', stageArt.jumpZoneArt(true), 4);
+  write('hatch.png', stageArt.hatchArt(), 4);
+  write('guide_arrow.png', stageArt.guideArrowArt(), 8);
   const t0 = performance.now();
   write('terrain_test_map.png', renderTerrain(new TileTerrain(TEST_MAP, 16, 1)), 2);
   console.log(`terrain rendered in ${Math.round(performance.now() - t0)} ms`);
+  for (const st of STAGES) {
+    const name = `stage${String(st.number).padStart(2, '0')}`;
+    const t1 = performance.now();
+    write(`${name}.png`, renderTerrain(new TileTerrain(st.map, 16, st.seed)), 1);
+    console.log(`${name} rendered in ${Math.round(performance.now() - t1)} ms`);
+    writeFileSync(join(outDir, `${name}.txt`), st.map.map((r, i) => String(i).padStart(2) + ' ' + r).join('\n'));
+  }
 } finally {
   await server.close();
 }

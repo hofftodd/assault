@@ -4,15 +4,19 @@ import { FONT_KEY } from '../art/textures';
 import { SESSION_KEY, type Session } from '../session';
 
 const MAX_LIFE_ICONS = 8;
+const CLOCK_RED = 0xff3030;
 
-/** Score and lives overlay, drawn by its own (never rotated) camera. */
+/** Score, clock, lives, banners and the guide arrow, drawn by their own (never rotated) camera. */
 export class HudScene extends Phaser.Scene {
   private session!: Session;
   private score!: Phaser.GameObjects.BitmapText;
   private topScore!: Phaser.GameObjects.BitmapText;
+  private clockLabel!: Phaser.GameObjects.BitmapText;
+  private clock!: Phaser.GameObjects.BitmapText;
   private lifeIcons: Phaser.GameObjects.Image[] = [];
   private debug!: Phaser.GameObjects.BitmapText;
   private banner!: Phaser.GameObjects.BitmapText;
+  private arrow!: Phaser.GameObjects.Image;
 
   constructor() {
     super('hud');
@@ -20,6 +24,7 @@ export class HudScene extends Phaser.Scene {
 
   create(): void {
     this.session = this.registry.get(SESSION_KEY);
+    this.lifeIcons = [];
     const label = (x: number, text: string) =>
       this.add.bitmapText(x, 4, FONT_KEY, text).setTint(HUD_PINK).setDropShadow(1, 1, 0x000000, 1);
     const number = (x: number) =>
@@ -29,10 +34,19 @@ export class HudScene extends Phaser.Scene {
     this.score = number(58);
     label(166, 'TOPSCORE');
     this.topScore = number(214);
+    this.clockLabel = label(100, 'TIME');
+    // The clock digits are drawn double size, as in the original.
+    this.clock = this.add.bitmapText(112, 12, FONT_KEY, '').setOrigin(0.5, 0).setScale(2).setDropShadow(1, 1, HUD_SHADOW_BLUE, 1);
 
     for (let i = 0; i < MAX_LIFE_ICONS; i++) this.lifeIcons.push(this.add.image(9 + i * 9, 277, 'lifeIcon'));
 
-    this.banner = this.add.bitmapText(112, 118, FONT_KEY, '').setOrigin(0.5).setTint(HUD_PINK).setDropShadow(1, 1, 0x000000, 1);
+    this.arrow = this.add.image(112, 112, 'guideArrow').setVisible(false);
+    this.banner = this.add
+      .bitmapText(112, 128, FONT_KEY, '')
+      .setOrigin(0.5)
+      .setCenterAlign()
+      .setTint(HUD_PINK)
+      .setDropShadow(1, 1, 0x000000, 1);
     this.debug = this.add.bitmapText(220, 238, FONT_KEY, '').setOrigin(1, 0).setTint(0x9cf0c0).setDropShadow(1, 1, 0x000000, 1);
   }
 
@@ -43,7 +57,14 @@ export class HudScene extends Phaser.Scene {
     // The life in play isn't shown, only the spares.
     this.lifeIcons.forEach((icon, i) => icon.setVisible(i < s.lives - 1));
 
+    const showClock = s.clock !== null;
+    this.clockLabel.setVisible(showClock);
+    this.clock.setVisible(showClock);
+    if (showClock) this.clock.setText(String(s.clock).padStart(2, '0')).setTint(s.clockRed ? CLOCK_RED : HUD_WHITE);
+
     this.banner.setText(s.message ?? '');
+    this.arrow.setVisible(s.guideAngle !== null && !s.message);
+    if (s.guideAngle !== null) this.arrow.setRotation(s.guideAngle);
 
     this.debug.setVisible(s.showDebug);
     if (s.showDebug) {

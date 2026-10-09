@@ -1,3 +1,4 @@
+import type { EnemyKind, Spawn } from './enemies';
 import { fbm, valueNoise } from './noise';
 
 export const Material = {
@@ -5,6 +6,8 @@ export const Material = {
   Rock: 1,
   Ground: 2,
   Rough: 3,
+  /** Paved base apron: drivable, with crisp straight edges. */
+  Concrete: 4,
 } as const;
 export type Material = (typeof Material)[keyof typeof Material];
 
@@ -24,17 +27,38 @@ export interface Terrain {
 
 /**
  * Tile map legend (one character per tile):
- *   ' ' void   '#' rock   '.' ground   ',' rough ground
- *   'b' bush on ground   'o' boulder on ground   'P' player start on ground
+ *   ' ' void   '#' rock   '.' ground   ',' rough ground   '=' concrete
+ *   'b' bush   'o' boulder   'P' player start   'J' jump zone   (all on ground)
+ *   'H' exit hatch (on concrete)
+ *   Enemies on ground: '1' Type 1   '2' Type 2   '5' Type 5   'a' 4-way Torchika   'A' 8-way Torchika
+ *   'C' Type 1 cannon (on concrete)
  */
 const LEGEND: Record<string, Material> = {
   ' ': Material.Void,
   '#': Material.Rock,
   '.': Material.Ground,
   ',': Material.Rough,
+  '=': Material.Concrete,
   b: Material.Ground,
   o: Material.Ground,
   P: Material.Ground,
+  J: Material.Ground,
+  H: Material.Concrete,
+  '1': Material.Ground,
+  '2': Material.Ground,
+  '5': Material.Ground,
+  a: Material.Ground,
+  A: Material.Ground,
+  C: Material.Concrete,
+};
+
+const ENEMY_CHARS: Record<string, EnemyKind> = {
+  '1': 'type1',
+  '2': 'type2',
+  '5': 'type5',
+  a: 'torchika1',
+  A: 'torchika2',
+  C: 'cannon1',
 };
 
 /** How far (px) tile boundaries are pushed around so cliffs look natural. */
@@ -48,6 +72,11 @@ export class TileTerrain implements Terrain {
   readonly height: number;
   readonly decor: Decor[] = [];
   readonly start = { x: 0, y: 0 };
+  /** Enemies placed with map letters. */
+  readonly spawns: Spawn[] = [];
+  /** World-space centres of jump zones and the exit hatch. */
+  readonly jumpZones: { x: number; y: number }[] = [];
+  hatch: { x: number; y: number } | null = null;
   private readonly tiles: Uint8Array;
 
   constructor(
@@ -71,6 +100,9 @@ export class TileTerrain implements Terrain {
         if (ch === 'b') this.decor.push({ kind: 'bush', x: cx, y: cy });
         if (ch === 'o') this.decor.push({ kind: 'boulder', x: cx, y: cy });
         if (ch === 'P') Object.assign(this.start, { x: cx, y: cy });
+        if (ch === 'J') this.jumpZones.push({ x: cx, y: cy });
+        if (ch === 'H') this.hatch = { x: cx, y: cy };
+        if (ENEMY_CHARS[ch]) this.spawns.push({ kind: ENEMY_CHARS[ch], tx, ty });
       });
     });
   }
@@ -80,12 +112,16 @@ export class TileTerrain implements Terrain {
     return this.tiles[ty * this.cols + tx] as Material;
   }
 
-  /** Material at a world position, with noisy boundaries between tiles. */
+  /** Material at a world position, with noisy boundaries between natural tiles. */
   materialAt(x: number, y: number): Material {
+    const ts = this.tileSize;
+    // Paved areas keep crisp, straight edges.
+    if (this.tileAt(Math.floor(x / ts), Math.floor(y / ts)) === Material.Concrete) return Material.Concrete;
     const s = this.seed;
     const jx = (fbm(x / 30, y / 30, s + 1, 2) - 0.5) * 2 * JITTER + (valueNoise(x / 5, y / 5, s + 7) - 0.5) * 3;
     const jy = (fbm(x / 30, y / 30, s + 2, 2) - 0.5) * 2 * JITTER + (valueNoise(x / 5, y / 5, s + 8) - 0.5) * 3;
-    return this.tileAt(Math.floor((x + jx) / this.tileSize), Math.floor((y + jy) / this.tileSize));
+    const m = this.tileAt(Math.floor((x + jx) / ts), Math.floor((y + jy) / ts));
+    return m === Material.Concrete ? Material.Ground : m;
   }
 
   solidAt(x: number, y: number): boolean {

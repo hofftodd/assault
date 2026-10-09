@@ -9,27 +9,58 @@ const SHADOW_DY = -8;
 
 const pick = (ramp: readonly RGB[], t: number): RGB => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(t * ramp.length)))];
 
-/** Distance (in px, up to `max`) from (x, y) to the nearest pixel of material `m`, or Infinity. */
-function nearest(mat: Uint8Array, w: number, h: number, x: number, y: number, m: number, max: number): number {
-  let best = Infinity;
-  for (let dy = -max; dy <= max; dy++) {
-    const yy = y + dy;
-    if (yy < 0 || yy >= h) continue;
-    for (let dx = -max; dx <= max; dx++) {
-      const xx = x + dx;
-      if (xx < 0 || xx >= w || mat[yy * w + xx] !== m) continue;
-      const d = Math.hypot(dx, dy);
-      if (d < best) best = d;
+/**
+ * Approximate Euclidean distance (px) from every pixel to the nearest pixel
+ * where `target` is true, via a two-pass chamfer transform (one pass each way).
+ */
+function distanceField(mat: Uint8Array, w: number, h: number, target: (m: number) => boolean): Float32Array {
+  const d = new Float32Array(w * h);
+  for (let i = 0; i < d.length; i++) d[i] = target(mat[i]) ? 0 : 1e9;
+  const D = Math.SQRT2;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      let v = d[i];
+      if (x > 0) v = Math.min(v, d[i - 1] + 1);
+      if (y > 0) {
+        v = Math.min(v, d[i - w] + 1);
+        if (x > 0) v = Math.min(v, d[i - w - 1] + D);
+        if (x < w - 1) v = Math.min(v, d[i - w + 1] + D);
+      }
+      d[i] = v;
     }
   }
-  return best <= max ? best : Infinity;
+  for (let y = h - 1; y >= 0; y--) {
+    for (let x = w - 1; x >= 0; x--) {
+      const i = y * w + x;
+      let v = d[i];
+      if (x < w - 1) v = Math.min(v, d[i + 1] + 1);
+      if (y < h - 1) {
+        v = Math.min(v, d[i + w] + 1);
+        if (x < w - 1) v = Math.min(v, d[i + w + 1] + D);
+        if (x > 0) v = Math.min(v, d[i + w - 1] + D);
+      }
+      d[i] = v;
+    }
+  }
+  return d;
 }
+
+const CONCRETE: RGB[] = [
+  [62, 62, 74],
+  [78, 78, 92],
+  [92, 92, 106],
+  [104, 104, 118],
+  [120, 120, 134],
+];
 
 export function renderTerrain(t: TileTerrain): Rgba {
   const { width: w, height: h, seed: s } = t;
   const mat = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) mat[y * w + x] = t.materialAt(x + 0.5, y + 0.5);
 
+  const toRock = distanceField(mat, w, h, (m) => m === Material.Rock);
+  const toOpen = distanceField(mat, w, h, (m) => m === Material.Ground || m === Material.Rough || m === Material.Concrete);
   const data = new Uint8ClampedArray(w * h * 4);
   const put = (x: number, y: number, c: RGB) => {
     const i = (y * w + x) * 4;
@@ -41,12 +72,13 @@ export function renderTerrain(t: TileTerrain): Rgba {
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const m = mat[y * w + x];
+      const i = y * w + x;
+      const m = mat[i];
       const grain = hash2(x, y, s);
       switch (m) {
         case Material.Ground: {
-          const toRock = nearest(mat, w, h, x, y, Material.Rock, 3);
-          if (toRock <= 3 && fbm(x / 4, y / 4, s + 50, 2) > 0.5 + toRock * 0.06) {
+          const rock = toRock[i];
+          if (rock <= 3 && fbm(x / 4, y / 4, s + 50, 2) > 0.5 + rock * 0.06) {
             put(x, y, pick(MOSS, fbm(x / 4, y / 4, s + 50, 2) * 0.9 + grain * 0.2));
             break;
           }
@@ -61,10 +93,7 @@ export function renderTerrain(t: TileTerrain): Rgba {
         }
         case Material.Rock: {
           // A thick, clumpy fringe of foliage where the cliffs meet the ground.
-          const toGround = Math.min(
-            nearest(mat, w, h, x, y, Material.Ground, 7),
-            nearest(mat, w, h, x, y, Material.Rough, 7),
-          );
+          const toGround = toOpen[i];
           const leafy = fbm(x / 4, y / 4, s + 50, 2);
           if (toGround <= 2 || leafy > 0.3 + toGround * 0.05) {
             const leafLight = fbm((x + 1) / 4, (y + 1) / 4, s + 50, 2) - leafy;
@@ -79,9 +108,19 @@ export function renderTerrain(t: TileTerrain): Rgba {
           put(x, y, pick(ROCK, Math.sqrt(puff) * 1.1 + toLight * 3 + grain * 0.05 - 0.15));
           break;
         }
+        case Material.Concrete: {
+          // Large paving slabs with dark seams; each slab slightly different.
+          const sx = Math.floor(x / 24);
+          const sy = Math.floor(y / 24);
+          const seam = x % 24 === 0 || y % 24 === 0;
+          const lip = x % 24 === 23 || y % 24 === 23;
+          const tone = 0.35 + hash2(sx, sy, s + 61) * 0.3 + (grain - 0.5) * 0.12;
+          put(x, y, seam ? CONCRETE[0] : lip ? CONCRETE[4] : pick(CONCRETE, tone));
+          break;
+        }
         default: {
-          const rim = nearest(mat, w, h, x, y, Material.Rock, 2);
-          if (rim <= 2) put(x, y, VOID_RIM[Math.min(VOID_RIM.length - 1, Math.floor(rim) - 1)]);
+          const rim = toRock[i];
+          if (rim <= 2) put(x, y, VOID_RIM[Math.max(0, Math.min(VOID_RIM.length - 1, Math.floor(rim) - 1))]);
           else if (grain > 0.994) put(x, y, STARS[Math.floor(hash2(x, y, s + 9) * STARS.length)]);
           else put(x, y, [0, 0, 0]);
         }

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { bulletArt, cannonArt, craterArt, missileArt, torchikaArt, TYPE1_TANK, TYPE2_TANK, TYPE5_TANK } from '../art/enemySprites';
 import { crosshairArt, shockwaveArt } from '../art/crosshair';
+import { guideArrowArt, hatchArt, jumpZoneArt } from '../art/stageArt';
 import { renderExplosion } from '../art/explosions';
 import { LIFE_ICON, NUKE_SHELL, PLAYER_TANK, PLAYER_TANK_BELLY, SHOT } from '../art/sprites';
 import { addAnimationStrip, addPixelArt, addPixelFont, addRgbaTexture } from '../art/textures';
@@ -36,9 +37,19 @@ export class BootScene extends Phaser.Scene {
     addRgbaTexture(this, 'crater', craterArt());
     addRgbaTexture(this, 'crosshair', crosshairArt());
     addRgbaTexture(this, 'shockwave', shockwaveArt());
+    addRgbaTexture(this, 'jumpZone', jumpZoneArt(false));
+    addRgbaTexture(this, 'jumpZoneSpent', jumpZoneArt(true));
+    addRgbaTexture(this, 'hatch', hatchArt());
+    addRgbaTexture(this, 'guideArrow', guideArrowArt());
     this.registry.set(SESSION_KEY, createSession());
     this.registry.set(SFX_KEY, new Sfx(window));
-    this.scene.start('game');
-    this.scene.launch('hud');
+    // ?play (and the test map) skip the title screen.
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('play') || params.get('map') === 'test') {
+      this.scene.start('game');
+      this.scene.launch('hud');
+    } else {
+      this.scene.start('title');
+    }
   }
 }

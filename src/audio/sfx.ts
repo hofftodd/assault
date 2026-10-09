@@ -14,7 +14,12 @@ export type SfxName =
   | 'enemyShot'
   | 'enemyDie'
   | 'playerDie'
-  | 'extend';
+  | 'extend'
+  | 'raise'
+  | 'clear'
+  | 'hatch'
+  | 'coin'
+  | 'tick';
 
 export class Sfx {
   private ctx: AudioContext | null = null;
@@ -74,6 +79,24 @@ export class Sfx {
       case 'playerDie':
         this.burst(t, 1.4, 2500, 50, 0.9);
         this.tone('sawtooth', 400, 30, t, 1.2, 0.3);
+        break;
+      case 'raise':
+        this.tone('sawtooth', 120, 900, t, 0.7, 0.18);
+        this.burst(t, 0.6, 400, 3000, 0.15);
+        break;
+      case 'clear':
+        [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => this.tone('square', f, f, t + i * 0.11, 0.14, 0.14));
+        break;
+      case 'hatch':
+        this.tone('triangle', 300, 70, t, 1.2, 0.3);
+        this.burst(t + 0.6, 0.9, 1200, 100, 0.25);
+        break;
+      case 'coin':
+        this.tone('square', 988, 988, t, 0.06, 0.15);
+        this.tone('square', 1319, 1319, t + 0.06, 0.25, 0.15);
+        break;
+      case 'tick':
+        this.tone('square', 1500, 1500, t, 0.03, 0.08);
         break;
       case 'extend':
         [523, 659, 784, 1047].forEach((f, i) => this.tone('square', f, f, t + i * 0.09, 0.12, 0.15));

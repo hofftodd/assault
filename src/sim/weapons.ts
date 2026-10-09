@@ -19,6 +19,8 @@ export const WEAPON_TUNING = {
    */
   nukeMinRange: 24,
   nukeRange: 120,
+  /** Raised on a jump zone the tank can lob much further. */
+  nukeRaisedRange: 200,
   nukeAimTime: 1.2,
   /** flight time (s) and peak height of the arc (px) for a full-range lob; shorter lobs are quicker and lower */
   nukeFlightTime: 0.9,
@@ -97,6 +99,8 @@ export class Weapons {
   aiming = false;
   /** Crosshair distance ahead of the tank centre (px). */
   aim = WEAPON_TUNING.nukeMinRange;
+  /** The crosshair's current maximum distance (px). */
+  aimMax = WEAPON_TUNING.nukeRange;
   private barrel: -1 | 1 = 1;
   private autoTimer = 0;
   /** Presses not yet acted on; one is handled per tick so quick taps aren't lost. */
@@ -113,8 +117,9 @@ export class Weapons {
     const pressed = this.pendingPresses > 0;
     if (pressed) this.pendingPresses--;
     const nukeReady = raised || (tank.mode === 'wheelie' && tank.lift >= 1);
+    this.aimMax = raised ? W.nukeRaisedRange : W.nukeRange;
     if (nukeReady && this.aiming) {
-      this.aim = Math.min(W.nukeRange, this.aim + ((W.nukeRange - W.nukeMinRange) / W.nukeAimTime) * dt);
+      this.aim = Math.min(this.aimMax, this.aim + ((this.aimMax - W.nukeMinRange) / W.nukeAimTime) * dt);
     } else {
       this.aim = W.nukeMinRange;
     }
@@ -157,7 +162,7 @@ export class Weapons {
 
   /** The crosshair has reached maximum range (drawn red rather than white). */
   get aimAtMax(): boolean {
-    return this.aim >= WEAPON_TUNING.nukeRange;
+    return this.aim >= this.aimMax;
   }
 
   /** Where the crosshair sits on the ground. */
@@ -192,7 +197,7 @@ export class Weapons {
   private launchNuke(t: Tank, raised: boolean): void {
     const W = WEAPON_TUNING;
     const f = forwardVector(t.heading);
-    const reach = this.aim / W.nukeRange;
+    const reach = Math.min(1, this.aim / W.nukeRange);
     const target = this.crosshair(t);
     this.nukes.push({
       fromX: t.x + f.x * 6,

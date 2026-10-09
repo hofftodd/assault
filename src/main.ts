@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
 import { GameScene } from './scenes/GameScene';
 import { HudScene } from './scenes/HudScene';
+import { NameEntryScene } from './scenes/NameEntryScene';
+import { TitleScene } from './scenes/TitleScene';
 import './style.css';
 
 /** The original's vertical monitor resolution. */
@@ -19,7 +21,7 @@ const game = new Phaser.Game({
   backgroundColor: '#000000',
   pixelArt: true,
   scale: { mode: Phaser.Scale.NONE, zoom: fitZoom() },
-  scene: [BootScene, GameScene, HudScene],
+  scene: [BootScene, TitleScene, GameScene, HudScene, NameEntryScene],
 });
 
 window.addEventListener('resize', () => game.scale.setZoom(fitZoom()));

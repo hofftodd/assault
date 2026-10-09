@@ -72,6 +72,25 @@ export class Painter {
     }
   }
 
+  /** Fill a polygon (even-odd rule), colouring each pixel with `paint(x, y)`. */
+  polygon(points: readonly [number, number][], paint: (x: number, y: number) => RGB | null): void {
+    const xs = points.map((p) => p[0]);
+    const ys = points.map((p) => p[1]);
+    for (let y = Math.floor(Math.min(...ys)); y <= Math.ceil(Math.max(...ys)); y++) {
+      for (let x = Math.floor(Math.min(...xs)); x <= Math.ceil(Math.max(...xs)); x++) {
+        let inside = false;
+        for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+          const [xi, yi] = points[i];
+          const [xj, yj] = points[j];
+          if (yi > y + 0.5 !== yj > y + 0.5 && x + 0.5 < ((xj - xi) * (y + 0.5 - yi)) / (yj - yi) + xi) inside = !inside;
+        }
+        if (!inside) continue;
+        const c = paint(x, y);
+        if (c) this.px(x, y, c);
+      }
+    }
+  }
+
   /** Draw a dark 1px outline around everything painted so far. */
   outline(c: RGB = OUTLINE): void {
     const w = this.width;

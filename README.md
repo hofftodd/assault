@@ -42,8 +42,11 @@ burst against cliffs. You can fire while rolling. During a wheelie a crosshair
 slides out from the tank, white while extending and red at full range (120 px).
 Fire lobs a nuke over obstacles to wherever the crosshair is, so fire early for
 a short lob. The nuke then needs 2.5 s to recharge. **M** mutes the sound. In dev builds, **`** (backquote) toggles a
-readout of the levers, the current move and the nuke recharge. Add `?peaceful`
-to the URL to drive around with no enemies.
+readout of the levers, the current move and the nuke recharge.
+
+**Enter** or **1** starts a game from the title screen. URL options for testing:
+`?play` skips the title, `?map=test` plays the proving-ground map, and
+`?peaceful` removes the enemies.
 
 ## Layout
 
@@ -72,5 +75,15 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   and award its points. Nukes damage everything in the blast. Wrecked tanks
   leave craters that slow you. One hit kills you ("YOU WERE HIT"); you get
   three lives, an extra life at 20,000 points, and a fresh game after GAME OVER.
-- **Next:** a faithful stage 1, with its map, wave script, jump zone, timer and
-  time bonus, end cannons and exit; plus the title screen and high scores.
+- **Milestone 4 (done):** stage 1, "Progress Planetary Circumstances", built from
+  the StrategyWiki walkthrough. It has the bends of light tanks, the 8-way pillbox
+  and jump zone, the big field of tanks, the pillbox run, and two cannons guarding
+  the base. Also included:
+  - PLAYER 1 READY, a 2:15 clock that shows under 100 s and flashes red, and TIME UP.
+  - Jump zones that raise the tank with a zoomed-out view and longer nukes,
+    with no recharge. They wake every enemy in view, and each works 3 times.
+  - The guide arrow, STAGE CLEAR, the time bonus (50 points per second), and
+    the hatch exit.
+  - The title screen with the high-score table, and name entry saved in the
+    browser.
+- **Next:** stage 2 onward.

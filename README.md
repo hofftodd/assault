@@ -136,5 +136,10 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
     ends the war, followed by the closing pages.
 
   From stage 6 on, enemies take the walkthrough's extra hits.
-- **Next:** stage 10 (the populated return to area 3, between stages 9 and 11).
-  For now, stage 9's hatch leads straight to stage 11.
+- **Milestone 8 (done):** stage 10, the populated return to area 3 (4:30, harder
+  hit counts), so all eleven stages now play through in order. You land in the
+  southern corridor under a Black Generator, push north through the rice paddies
+  and up the winding north-eastern paths, then take the twelve-cannon battery
+  (four each of Types 1, 2 and 3). The launch pad sends you back to the enemy
+  base for stage 11.
+- **Next:** polish (music, gamepad support, a desktop build).

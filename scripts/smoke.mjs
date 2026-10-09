@@ -349,6 +349,26 @@ try {
   await page.waitForTimeout(1500);
   await shot('28-stage6-base');
 
+  await page.goto('http://localhost:4173/?play&stage=10');
+  await page.waitForFunction(() => window.__assault?.stage === 10 && window.__assault.world.state === 'playing', null, { timeout: 30000 }).catch(() => {});
+  const s10 = await page.evaluate(() => {
+    const w = window.__assault.world;
+    const n = (k) => w.enemies.filter((e) => e.kind === k).length;
+    return { time: w.timeLeft, cannons: [n('cannon1'), n('cannon2'), n('cannon3')], black: n('generator2'), exit: w.exit, sixteen: w.enemies.find((e) => e.kind === 'type7b')?.hp };
+  });
+  check(
+    s10.time > 265 && s10.cannons.join() === '4,4,4' && s10.black === 1 && s10.exit === 'launch' && s10.sixteen === 48,
+    `stage 10: 4:30, four each of Type 1, 2 and 3 cannons, a Black Generator, hard Type 7-Bs (${JSON.stringify(s10)})`,
+  );
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.invulnerable = 1e9;
+    const g = w.enemies.find((e) => e.kind === 'generator2');
+    Object.assign(w.tank, { x: g.x - 70, y: g.y, heading: Math.PI / 2 });
+  });
+  await page.waitForTimeout(1500);
+  await shot('28b-stage10-corridor');
+
   await page.goto('http://localhost:4173/?play&stage=11');
   await page.waitForFunction(() => window.__assault?.stage === 11 && window.__assault.world.state === 'playing', null, { timeout: 30000 }).catch(() => {});
   const s11 = await page.evaluate(() => {

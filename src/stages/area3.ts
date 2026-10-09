@@ -195,3 +195,63 @@ export function stage5(): StageDef {
     ],
   );
 }
+
+/**
+ * Stage 10: back on area 3, now fully manned. East along the southern corridor under
+ * the Black Generator, past heavy tanks; north through the rice paddies; up the
+ * winding north-eastern paths through armour, UFO launchers and Type 5s; then the
+ * battery of four Type 1, four Type 2 and four Type 3 cannons, and the launch pad
+ * back to the enemy base. Enemies take the second-half hit counts. 4:30.
+ */
+export function stage10(): StageDef {
+  const L = new Layout(areaMap(110), { x: 82, y: 0, w: 94, h: 175 });
+  const c = L.c;
+  // The north-east battery, and the launch pad below it.
+  c.rect(115, 10, 14, 13, '=').rect(119, 23, 5, 8, '=');
+  c.put(121, 28, 'H');
+  c.put(92, 162, 'P');
+  L.reserve(92, 162).reserve(121, 28);
+  const kinds = ['cannon1', 'cannon2', 'cannon3'] as const;
+  kinds.forEach((kind, row) => {
+    for (const x of [117, 120, 123, 126]) L.place(kind, x, 12 + row * 3);
+  });
+
+  // East along the southern corridor.
+  L.group(102, 161, 2, [['type1a', 1]]);
+  L.group(111, 158, 4, [['fourlegs', 8]]);
+  L.place('generator2', 119, 160);
+  L.group(127, 162, 3, [['type7b', 2]]);
+  L.group(133, 158, 2, [['type3', 1]]);
+  L.group(140, 156, 3, [['type7a', 2]]);
+  L.group(147, 150, 4, [['type6', 3]]);
+  // North through the paddies.
+  L.group(150, 138, 4, [['type3', 9]]);
+  L.group(152, 128, 3, [['fourlegs', 4]]);
+  L.group(150, 118, 4, [['type7a', 2], ['type7b', 2]]);
+  L.group(148, 104, 3, [['scouter', 4]]);
+  L.group(152, 96, 3, [['fourlegs', 4]]);
+  L.group(150, 88, 3, [['type3', 4]]);
+  // Up the winding paths.
+  L.group(162, 80, 3, [['type1a', 6]]);
+  L.group(168, 62, 2, [['type5', 1]]);
+  L.ufos(165, 30, 3, 4, L.group(160, 42, 4, [['type1a', 11]]));
+  L.ufos(145, 16, 3, 3, L.group(152, 20, 3, [['type5', 2]]));
+  L.group(130, 5, 5, [['type1a', 17]]);
+
+  return L.finish(
+    { number: 10, area: AREA, timeLimit: 270, hard: true, seed: 110, startHeading: 90, exit: 'launch' },
+    [
+      [104, 162],
+      [130, 162],
+      [146, 146],
+      [150, 125],
+      [152, 92],
+      [165, 70],
+      [166, 42],
+      [160, 20],
+      [142, 12],
+      [126, 5],
+      [121, 8],
+    ],
+  );
+}

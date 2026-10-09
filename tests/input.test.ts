@@ -93,3 +93,71 @@ describe('KeyboardLevers', () => {
     expect(kb.fire).toBe(false);
   });
 });
+
+describe('arrow controls', () => {
+  function arrows() {
+    const target = new EventTarget();
+    let now = 1000;
+    const kb = new KeyboardLevers(target, DEFAULT_BINDINGS, () => now);
+    const down = (code: string) => target.dispatchEvent(new FakeKeyEvent('keydown', code));
+    const up = (code: string) => target.dispatchEvent(new FakeKeyEvent('keyup', code));
+    const wait = (ms: number) => (now += ms);
+    return { kb, down, up, wait };
+  }
+
+  it('drives forward and back, and turns', () => {
+    const { kb, down, up } = arrows();
+    down('ArrowUp');
+    expect(kb.maneuver).toBe('forward');
+    up('ArrowUp');
+    down('ArrowDown');
+    expect(kb.maneuver).toBe('back');
+    up('ArrowDown');
+    down('ArrowLeft');
+    expect(kb.maneuver).toBe('turnLeft');
+    up('ArrowLeft');
+    expect(kb.maneuver).toBe('idle');
+  });
+
+  it('turning takes priority over driving', () => {
+    const { kb, down } = arrows();
+    down('ArrowUp');
+    down('ArrowRight');
+    expect(kb.maneuver).toBe('turnRight');
+  });
+
+  it('pops a wheelie with left and right together', () => {
+    const { kb, down } = arrows();
+    down('ArrowLeft');
+    down('ArrowRight');
+    expect(kb.maneuver).toBe('wheelie');
+  });
+
+  it('rolls on a quick double tap, but not on a slow one', () => {
+    const { kb, down, up, wait } = arrows();
+    down('ArrowRight');
+    wait(60);
+    up('ArrowRight');
+    wait(90);
+    down('ArrowRight');
+    expect(kb.maneuver).toBe('rollRight');
+    up('ArrowRight');
+    wait(20);
+    expect(kb.maneuver).toBe('rollRight');
+    wait(400);
+    expect(kb.maneuver).toBe('idle');
+
+    down('ArrowLeft');
+    up('ArrowLeft');
+    wait(500);
+    down('ArrowLeft');
+    expect(kb.maneuver).toBe('turnLeft');
+  });
+
+  it('leaves the twin-lever keys working when no arrow is held', () => {
+    const { kb, down } = arrows();
+    down('KeyW');
+    down('KeyI');
+    expect(kb.maneuver).toBe('forward');
+  });
+});

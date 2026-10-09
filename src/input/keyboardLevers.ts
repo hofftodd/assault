@@ -1,13 +1,19 @@
 import type { Bindings, LeverKeys } from './bindings';
+import { ArrowControls } from './arrowControls';
 import { Lever } from './lever';
 import { resolveManeuver, type Dir, type Maneuver } from './maneuver';
 
 type Held = Exclude<Dir, 'none'>;
 
-/** Maps raw keyboard events onto the two levers and the fire/start buttons. */
+/**
+ * Maps raw keyboard events onto the controls: the two levers (WASD + IJKL), the
+ * one-handed arrow scheme, and the fire/start buttons. Whichever scheme is in use
+ * drives the tank; the arrows win while any arrow is held.
+ */
 export class KeyboardLevers {
   readonly left = new Lever();
   readonly right = new Lever();
+  readonly arrows = new ArrowControls();
 
   private fireHeld = new Set<string>();
   private firePresses = 0;
@@ -17,9 +23,13 @@ export class KeyboardLevers {
   constructor(
     private readonly target: EventTarget,
     bindings: Bindings,
+    private readonly now: () => number = () => performance.now(),
   ) {
     this.bindLever(this.left, bindings.left);
     this.bindLever(this.right, bindings.right);
+    for (const dir of ['up', 'down', 'left', 'right'] as Held[]) {
+      this.keyMap.set(bindings.arrows[dir], (down) => (down ? this.arrows.press(dir, this.now()) : this.arrows.release(dir)));
+    }
     for (const code of bindings.fire) {
       this.keyMap.set(code, (down) => {
         if (down && !this.fireHeld.has(code)) this.firePresses++;
@@ -44,6 +54,8 @@ export class KeyboardLevers {
   }
 
   get maneuver(): Maneuver {
+    const t = this.now();
+    if (this.arrows.active(t)) return this.arrows.maneuver(t);
     return resolveManeuver(this.left.dir, this.right.dir);
   }
 
@@ -84,6 +96,7 @@ export class KeyboardLevers {
   private onBlur = (): void => {
     this.left.clear();
     this.right.clear();
+    this.arrows.clear();
     this.fireHeld.clear();
   };
 }

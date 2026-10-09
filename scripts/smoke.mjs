@@ -112,6 +112,26 @@ try {
   await release(['KeyA', 'KeyL']);
   check((await blastKinds()).includes('nuke'), 'the nuke explodes where it lands');
 
+  // The one-handed arrow scheme, from the open ground at the start.
+  await page.evaluate(() => Object.assign(window.__assault.tank, { x: 19.5 * 16, y: 28.5 * 16, heading: 0 }));
+  const a0 = await tank();
+  await hold(['ArrowUp'], 500);
+  await release(['ArrowUp']);
+  const a1 = await tank();
+  const movedA = Math.hypot(a1.x - a0.x, a1.y - a0.y);
+  check(movedA > 10, `arrow up drives forward (${movedA.toFixed(1)} px)`);
+  await hold(['ArrowLeft', 'ArrowRight'], 300);
+  check((await tank()).mode === 'wheelie', 'left + right arrows pop a wheelie');
+  await release(['ArrowLeft', 'ArrowRight']);
+  await page.waitForTimeout(400);
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(60);
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(60);
+  check((await tank()).mode === 'roll', 'a double tap of the right arrow rolls');
+  await page.keyboard.up('ArrowRight');
+  await page.waitForTimeout(500);
+
   // Phase 2: combat against the test map's enemies.
   await page.goto('http://localhost:4173/?map=test');
   await page.waitForFunction(() => window.__assault?.world?.state === 'playing', null, { timeout: 15000 });
@@ -237,7 +257,7 @@ try {
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('assault.highScores.v1') ?? '[]'));
   check(saved[0]?.name === 'TODD' && saved[0]?.score >= 50000 && saved[0]?.stage === '02', `the new top score is saved (${JSON.stringify(saved[0])})`);
   await page.waitForTimeout(7300);
-  await shot('20-record-table');
+  await shot('20-how-to-play');
 
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {

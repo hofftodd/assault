@@ -12,6 +12,8 @@ export interface LeverKeys {
 export interface Bindings {
   left: LeverKeys;
   right: LeverKeys;
+  /** One-handed scheme: drive with the arrows (see input/arrowControls.ts). */
+  arrows: LeverKeys;
   fire: string[];
   start: string[];
 }
@@ -19,6 +21,7 @@ export interface Bindings {
 export const DEFAULT_BINDINGS: Bindings = {
   left: { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD' },
   right: { up: 'KeyI', down: 'KeyK', left: 'KeyJ', right: 'KeyL' },
+  arrows: { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' },
   fire: ['Space'],
   start: ['Enter', 'Digit1'],
 };

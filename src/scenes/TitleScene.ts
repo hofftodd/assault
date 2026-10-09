@@ -16,6 +16,7 @@ export class TitleScene extends Phaser.Scene {
   private sfx!: Sfx;
   private logoPage!: Phaser.GameObjects.Container;
   private scorePage!: Phaser.GameObjects.Container;
+  private helpPage!: Phaser.GameObjects.Container;
   private scoreRows!: Phaser.GameObjects.BitmapText;
   private push!: Phaser.GameObjects.BitmapText;
   private starting = false;
@@ -65,6 +66,36 @@ export class TitleScene extends Phaser.Scene {
       .setTint(0xffe0f0, 0xffe0f0, 0xd04070, 0xd04070);
     this.scorePage = this.add.container(0, 0, [recordTitle, text(112, 178, 'RANK  SCORE STG COMMANDER', HUD_PINK), this.scoreRows]);
 
+    const helpTitle = this.add
+      .bitmapText(112, 44, FONT_KEY, 'HOW TO PLAY')
+      .setOrigin(0.5)
+      .setScale(2)
+      .setTint(0xffe0f0, 0xffe0f0, 0xd04070, 0xd04070);
+    const rows = (y: number, lines: [string, string][]) =>
+      lines.map(([k, v], i) => [
+        this.add.bitmapText(16, y + i * 14, FONT_KEY, k).setTint(HUD_PINK).setDropShadow(1, 1, 0x000000, 1),
+        this.add.bitmapText(100, y + i * 14, FONT_KEY, v).setTint(HUD_WHITE).setDropShadow(1, 1, 0x000000, 1),
+      ]).flat();
+    this.helpPage = this.add.container(0, 0, [
+      helpTitle,
+      text(112, 66, 'ARROW KEYS', HUD_WHITE),
+      ...rows(84, [
+        ['UP / DOWN', 'DRIVE / REVERSE'],
+        ['LEFT / RIGHT', 'TURN'],
+        ['LEFT+RIGHT', 'WHEELIE, AIM NUKE'],
+        ['TAP TAP L/R', 'ROLL SIDEWAYS'],
+        ['SPACE', 'FIRE'],
+      ]),
+      text(112, 162, 'ARCADE TWIN LEVERS', HUD_WHITE),
+      ...rows(180, [
+        ['W+I / S+K', 'DRIVE / REVERSE'],
+        ['S+I / W+K', 'TURN LEFT / RIGHT'],
+        ['A+L', 'WHEELIE'],
+        ['A+J / D+L', 'ROLL'],
+      ]),
+      text(112, 240, 'M  SOUND ON/OFF', HUD_PINK),
+    ]);
+
     this.add.bitmapText(10, 4, FONT_KEY, '1UPSCORE').setTint(HUD_PINK);
     this.add.bitmapText(166, 4, FONT_KEY, 'TOPSCORE').setTint(HUD_PINK);
     const scores = this.add.bitmapText(214, 13, FONT_KEY, '').setOrigin(1, 0).setTint(HUD_WHITE).setDropShadow(1, 1, HUD_SHADOW_BLUE, 1);
@@ -82,8 +113,10 @@ export class TitleScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     this.elapsed += delta / 1000;
-    const onScores = Math.floor(this.elapsed / PAGE_TIME) % 2 === 1;
-    this.logoPage.setVisible(!onScores);
+    const page = Math.floor(this.elapsed / PAGE_TIME) % 3;
+    const onScores = page === 2;
+    this.logoPage.setVisible(page === 0);
+    this.helpPage.setVisible(page === 1);
     this.scorePage.setVisible(onScores);
     if (onScores) {
       this.scoreRows.setText(

@@ -24,8 +24,19 @@ npm run art        # renders sprites/terrain/font to smoke-output/art/ for inspe
 
 ## Controls
 
-The original cabinet had two 4-way levers, one per hand. Here the left lever is
-**WASD** and the right lever is **IJKL**. Only these pairs do anything:
+**Arrow keys (easiest on a keyboard):**
+
+| Keys | Move |
+|---|---|
+| ↑ / ↓ | Drive forward / reverse |
+| ← / → | Turn left / right |
+| ← + → together | Wheelie: the tank rears up and a crosshair slides out; fire launches a nuke |
+| Double-tap ← or → | Roll (flip over sideways) that way |
+| Space | Fire |
+
+**Arcade twin levers:** the original cabinet had two 4-way levers, one per hand.
+Here the left lever is **WASD** and the right lever is **IJKL**, and only these
+pairs do anything:
 
 | Left lever | Right lever | Keys | Move |
 |---|---|---|---|
@@ -35,18 +46,19 @@ The original cabinet had two 4-way levers, one per hand. Here the left lever is
 | ↑ | ↓ | W + K | Turn right |
 | ← | ← | A + J | Roll left (flip over sideways) |
 | → | → | D + L | Roll right |
-| ← | → | A + L | Wheelie (stops and rears up; fire launches a nuke) |
+| ← | → | A + L | Wheelie |
 
-**Space** fires: tap or hold. At most three shots can be on screen, and they
-burst against cliffs. You can fire while rolling. During a wheelie a crosshair
-slides out from the tank, white while extending and red at full range (120 px).
-Fire lobs a nuke over obstacles to wherever the crosshair is, so fire early for
-a short lob. The nuke then needs 2.5 s to recharge. **M** mutes the sound. In dev builds, **`** (backquote) toggles a
-readout of the levers, the current move and the nuke recharge.
+Both schemes work at the same time. **Space** fires: tap or hold. At most three
+shots can be on screen, and they burst against cliffs. You can fire while
+rolling. During a wheelie a crosshair slides out from the tank, white while
+extending and red at full range (120 px). Fire lobs a nuke over obstacles to
+wherever the crosshair is, so fire early for a short lob. The nuke then needs
+2.5 s to recharge. **M** mutes the sound. In dev builds, **`** (backquote)
+toggles a readout of the levers, the current move and the nuke recharge.
 
-**Enter** or **1** starts a game from the title screen. URL options for testing:
-`?play` skips the title, `?stage=N` starts at stage N, `?map=test` plays the
-proving-ground map, and `?peaceful` removes the enemies.
+**Enter**, **1**, **Space** or a click starts a game from the title screen. URL
+options for testing: `?play` skips the title, `?stage=N` starts at stage N,
+`?map=test` plays the proving-ground map, and `?peaceful` removes the enemies.
 
 ## Layout
 

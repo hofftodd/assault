@@ -19,6 +19,9 @@ import { TEST_MAP, TEST_SPAWNS } from '../stages/testMap';
 /** Simulation tick, decoupled from the display refresh rate. */
 const STEP = 1 / 60;
 
+/** Game time simulated since the page loaded, across stages (exposed for tests). */
+let simClock = 0;
+
 /** Where the player's tank sits on the 224x288 screen; the world rotates around this point. */
 export const TANK_SCREEN_X = 112;
 export const TANK_SCREEN_Y = 225;
@@ -182,7 +185,8 @@ export class GameScene extends Phaser.Scene {
     this.world = new World(terrain, spawns, {
       lives: this.session.lives,
       score: this.session.score,
-      seed: Date.now(),
+      // ?seed=N makes enemy behaviour repeatable (the smoke test uses it).
+      seed: Number(params.get('seed')) || Date.now(),
       hard: st.hard,
       timeLimit: st.timeLimit,
       guide: st.guide.map(tile),
@@ -218,6 +222,10 @@ export class GameScene extends Phaser.Scene {
       weapons: this.world.weapons,
       levers: this.levers,
       blasts: [] as Blast[],
+      /** Seconds of game time simulated since the page loaded (lets tests wait in game time). */
+      get simTime() {
+        return simClock;
+      },
     };
     this.syncView();
   }
@@ -235,6 +243,7 @@ export class GameScene extends Phaser.Scene {
       for (const e of this.world.step(STEP, this.levers.maneuver, { held: this.levers.fire, presses })) this.handle(e);
       presses = 0;
       this.acc -= STEP;
+      simClock += STEP;
     }
 
     const w = this.world;

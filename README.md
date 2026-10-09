@@ -22,9 +22,30 @@ npm install
 npm run dev        # play at http://localhost:5173
 npm test           # unit tests
 npm run build      # typecheck + production build in dist/
-npm run smoke      # after a build: drives the game in headless Chromium, saves screenshots
+npm run smoke      # builds, then drives the game in headless Chromium and saves screenshots
 npm run art        # renders sprites/terrain/font to smoke-output/art/ for inspection
 ```
+
+### The smoke test
+
+`npm run smoke` plays through five phases in a real browser: `controls`, `combat`,
+`campaign` (title, stage 1, stage 2, name entry), `area3` and `area4`. Screenshots
+go to `smoke-output/`. Options go after `--`:
+
+```sh
+npm run smoke -- --phase=controls,area3   # only some phases
+npm run smoke -- --repeat=5               # run several times and list any flaky checks
+npm run smoke -- --seed=42                # a different (but repeatable) enemy seed
+node scripts/smoke.mjs --phase=combat     # skip the rebuild and test the current dist/
+```
+
+Checks wait in game time or poll until a condition holds, not on fixed sleeps, so a
+slow or busy machine can't make one fire early. Each check has a fixed name, so
+`--repeat` can count failures per check. When a check fails, the summary names it
+and `smoke-output/failures/` gets a screenshot, a JSON snapshot of the game state
+(world state, tank, enemies by kind, weapons) and the recent browser console log.
+The game supports this with `?seed=N` for repeatable enemy behaviour and
+`window.__assault.simTime`, a game-time clock.
 
 ## Controls
 

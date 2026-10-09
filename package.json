@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "smoke": "node scripts/smoke.mjs",
+    "smoke": "vite build && node scripts/smoke.mjs",
     "art": "node scripts/preview-art.mjs"
   },
   "dependencies": {

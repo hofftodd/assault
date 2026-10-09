@@ -53,15 +53,16 @@ export class TitleScene extends Phaser.Scene {
       logo,
       tankShadow,
       tank,
-      text(112, 214, "A FAN REMAKE OF\n\nNAMCO'S 1988 ARCADE GAME"),
-      text(112, 244, 'ALL ART AND SOUND ORIGINAL', HUD_PINK),
+      text(112, 196, "A FAN REMAKE OF\n\nNAMCO'S 1988 ARCADE GAME"),
+      text(112, 226, 'ALL ART AND SOUND ORIGINAL', HUD_PINK),
     ]);
 
-    this.scoreRows = this.add.bitmapText(14, 190, FONT_KEY, '').setTint(HUD_WHITE).setDropShadow(1, 1, HUD_SHADOW_BLUE, 1);
+    this.scoreRows = this.add.bitmapText(14, 190, FONT_KEY, '').setLineSpacing(4).setTint(HUD_WHITE).setDropShadow(1, 1, HUD_SHADOW_BLUE, 1);
     const recordTitle = this.add
       .bitmapText(112, 64, FONT_KEY, 'RECORD\nOF\nTHE BEST SCORE')
       .setOrigin(0.5)
       .setCenterAlign()
+      .setLineSpacing(4)
       .setScale(2)
       .setTint(0xffe0f0, 0xffe0f0, 0xd04070, 0xd04070);
     this.scorePage = this.add.container(0, 0, [recordTitle, text(112, 178, 'RANK  SCORE STG COMMANDER', HUD_PINK), this.scoreRows]);
@@ -85,16 +86,16 @@ export class TitleScene extends Phaser.Scene {
         ['LEFT+RIGHT', 'WHEELIE, AIM NUKE'],
         ['TAP TAP L/R', 'ROLL SIDEWAYS'],
         ['SPACE', 'FIRE'],
+        ['M', 'SOUND ON / OFF'],
       ]),
-      text(112, 162, 'ARCADE TWIN LEVERS', HUD_WHITE),
-      ...rows(180, [
+      text(112, 170, 'ARCADE TWIN LEVERS', HUD_WHITE),
+      ...rows(186, [
         ['W+I / S+K', 'DRIVE / REVERSE'],
         ['S+I / W+K', 'TURN LEFT / RIGHT'],
         ['A+L', 'WHEELIE'],
         ['A+J / D+L', 'ROLL'],
         ['W OR I ALONE', 'ARC RIGHT / LEFT'],
       ]),
-      text(112, 254, 'M  SOUND ON/OFF', HUD_PINK),
     ]);
 
     this.add.bitmapText(10, 4, FONT_KEY, '1UPSCORE').setTint(HUD_PINK);
@@ -104,7 +105,7 @@ export class TitleScene extends Phaser.Scene {
     scores.setText(String(this.session.topScore));
     last.setText(String(this.session.score));
 
-    this.push = text(112, 270, 'PUSH 1P BUTTON\n\n(ENTER, 1, SPACE OR CLICK)', HUD_PINK);
+    this.push = text(112, 256, 'PUSH 1P BUTTON\n\n(ENTER, 1, SPACE OR CLICK)', HUD_PINK);
 
     window.addEventListener('keydown', this.onKey);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.removeEventListener('keydown', this.onKey));
@@ -123,7 +124,7 @@ export class TitleScene extends Phaser.Scene {
       this.scoreRows.setText(
         this.session.highScores
           .map((e, i) => `${RANK_LABELS[i]} ${String(e.score).padStart(7)}  ${e.stage}  ${e.name}`)
-          .join('\n\n'),
+          .join('\n'),
       );
     }
     this.push.setVisible(Math.floor(time / 500) % 2 === 0);

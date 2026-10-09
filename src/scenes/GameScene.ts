@@ -4,6 +4,7 @@ import { ART_SCALE } from '../art/painter';
 import { releaseTerrain, requestTerrain } from '../art/terrainCache';
 import { addTiledTexture } from '../art/textures';
 import type { Sfx } from '../audio/sfx';
+import { stageTrack } from '../audio/songs';
 import { DEFAULT_BINDINGS } from '../input/bindings';
 import { KeyboardLevers } from '../input/keyboardLevers';
 import { rankFor } from '../highScores';
@@ -12,7 +13,7 @@ import { ENEMIES, headingTo, type Enemy, type EnemyKind } from '../sim/enemies';
 import { forwardVector, rollProgress } from '../sim/tank';
 import { TileTerrain } from '../sim/terrain';
 import { nukePosition, WEAPON_TUNING, type Blast } from '../sim/weapons';
-import { World, WORLD_TUNING, type Crater, type JumpZone, type WorldEvent } from '../sim/world';
+import { World, WORLD_TUNING, type Crater, type JumpZone, type WorldEvent, type WorldState } from '../sim/world';
 import { STAGES, type StageDef } from '../stages/stages';
 import { TEST_MAP, TEST_SPAWNS } from '../stages/testMap';
 
@@ -129,6 +130,8 @@ export class GameScene extends Phaser.Scene {
   private endingTime = -1;
   private leaving = false;
   private acc = 0;
+  /** The world state the soundtrack last reacted to. */
+  private musicState: WorldState | null = null;
 
   constructor() {
     super('game');
@@ -147,6 +150,7 @@ export class GameScene extends Phaser.Scene {
     this.endingTime = -1;
     this.leaving = false;
     this.acc = 0;
+    this.musicState = null;
 
     // ?map=test plays the proving ground; ?peaceful removes the enemies.
     const params = new URLSearchParams(window.location.search);
@@ -213,6 +217,7 @@ export class GameScene extends Phaser.Scene {
       window.removeEventListener('keydown', this.onKey);
     });
 
+    const sfx = this.sfx;
     (window as unknown as { __assault: unknown }).__assault = {
       game: this.game,
       scene: 'game',
@@ -225,6 +230,10 @@ export class GameScene extends Phaser.Scene {
       /** Seconds of game time simulated since the page loaded (lets tests wait in game time). */
       get simTime() {
         return simClock;
+      },
+      /** The soundtrack track last cued. */
+      get music() {
+        return sfx.track;
       },
     };
     this.syncView();
@@ -247,6 +256,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const w = this.world;
+    this.cueMusic();
     this.session.score = w.score;
     this.session.lives = w.lives;
     this.session.topScore = Math.max(this.session.topScore, w.score);
@@ -435,7 +445,6 @@ export class GameScene extends Phaser.Scene {
         this.zoomTo(1);
         break;
       case 'stageClear':
-        this.sfx.play('clear');
         this.zoomTo(1);
         break;
       case 'timeBonus':
@@ -458,6 +467,36 @@ export class GameScene extends Phaser.Scene {
         break;
       case 'extend':
         this.sfx.play('extend');
+        break;
+    }
+  }
+
+  /**
+   * The soundtrack follows the world: the stage's theme while playing (from the top
+   * after READY), silence when the tank is hit, the clear fanfare, the area-clear
+   * fanfare on hatches and launch pads, the game-over lament, and the ending anthem.
+   */
+  private cueMusic(): void {
+    const w = this.world;
+    if (w.state === this.musicState) return;
+    const prev = this.musicState;
+    this.musicState = w.state;
+    switch (w.state) {
+      case 'playing':
+        if (prev !== 'playing') this.sfx.music(stageTrack(this.stage.number));
+        break;
+      case 'dying':
+        this.sfx.music(null);
+        break;
+      case 'cleared':
+        this.sfx.music('clear');
+        break;
+      case 'exiting':
+        if (this.stage.number === FINAL_STAGE) this.sfx.music('ending');
+        else if (w.exit !== 'gate') this.sfx.music('areaClear');
+        break;
+      case 'gameOver':
+        this.sfx.music('gameOver');
         break;
     }
   }

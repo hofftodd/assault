@@ -320,6 +320,7 @@ async function campaign(t) {
     cannons: window.__assault.world.enemies.filter((e) => e.kind === 'cannon1').length,
   }));
   await t.check('stage 1 starts with a 2:15 clock, a jump zone and two cannons', s1.stage === 1 && s1.time > 130 && s1.time <= 135 && s1.zones === 1 && s1.cannons === 2, s1);
+  await t.check('stage 1 plays its theme', await t.until(() => window.__assault.music === 'stage1', undefined, 5), await t.eval(() => window.__assault.music));
   await t.sim(0.8);
   await t.shot('13-stage1-playing');
 
@@ -348,6 +349,7 @@ async function campaign(t) {
   });
   await t.eval(removeCannons);
   await t.check('destroying both cannons clears the stage', await t.until(() => window.__assault.world.state === 'cleared', undefined, 5));
+  await t.check('the stage-clear fanfare plays', await t.until(() => window.__assault.music === 'clear', undefined, 3), await t.eval(() => window.__assault.music));
   await t.sim(0.6);
   await t.shot('15-stage-clear');
   await t.until(() => window.__assault.world.bonus.points !== 0, undefined, 8);
@@ -355,6 +357,7 @@ async function campaign(t) {
   await t.check('time bonus pays 50 per second', bonus.points === bonus.seconds * 50 && bonus.seconds > 0, `${bonus.seconds} s, ${bonus.points} pts`);
   await t.shot('16-time-bonus');
   await t.until(() => window.__assault.world.state === 'exiting', undefined, 8);
+  await t.check('leaving by the hatch plays the area-clear fanfare', await t.until(() => window.__assault.music === 'areaClear', undefined, 3), await t.eval(() => window.__assault.music));
   await t.sim(1.5);
   await t.shot('17-hatch');
   // The next stage replaces the world as soon as this one is done, so accept either.
@@ -367,6 +370,7 @@ async function campaign(t) {
     return { stage: window.__assault.stage, time: w.timeLeft, hidden: w.enemies.filter((e) => e.state === 'hidden').length, zones: w.jumpZones.length };
   });
   await t.check('stage 2 follows: 2:40 clock, 16 buried UFO launchers, 2 jump zones', s2.stage === 2 && s2.time > 155 && s2.hidden === 16 && s2.zones === 2, s2);
+  await t.check('stage 2 plays its own theme', await t.until(() => window.__assault.music === 'land', undefined, 5), await t.eval(() => window.__assault.music));
   await t.sim(0.6);
   await t.shot('18-stage2');
   await t.eval(() => {
@@ -408,6 +412,7 @@ async function area3(t) {
     return { time: w.timeLeft, gate: !!w.terrain.gate, cannons: w.enemies.filter((e) => e.kind.startsWith('cannon')).length, sixteen: w.enemies.filter((e) => e.kind === 'type7b').length };
   });
   await t.check('stage 3: 1:50 clock, exit gates, four cannons, two Type 7-Bs', s3.time > 105 && s3.time <= 110 && s3.gate && s3.cannons === 4 && s3.sixteen === 2, s3);
+  await t.check('area 3 plays its theme', await t.until(() => window.__assault.music === 'river', undefined, 5), await t.eval(() => window.__assault.music));
   await t.eval(() => {
     const w = window.__assault.world;
     w.invulnerable = 1e9;

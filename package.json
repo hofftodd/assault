@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "smoke": "vite build && node scripts/smoke.mjs",
-    "art": "node scripts/preview-art.mjs"
+    "art": "node scripts/preview-art.mjs",
+    "music": "node scripts/render-music.mjs"
   },
   "dependencies": {
     "phaser": "3.90.0"

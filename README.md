@@ -24,6 +24,7 @@ npm test           # unit tests
 npm run build      # typecheck + production build in dist/
 npm run smoke      # builds, then drives the game in headless Chromium and saves screenshots
 npm run art        # renders sprites/terrain/font to smoke-output/art/ for inspection
+npm run music      # renders the soundtrack to WAV files in smoke-output/music/
 ```
 
 ### The smoke test
@@ -163,6 +164,19 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   and up the winding north-eastern paths, then take the twelve-cannon battery
   (four each of Types 1, 2 and 3). The launch pad sends you back to the enemy
   base for stage 11.
+- **Music:** an original soundtrack in the spirit of the arcade board: driving
+  sixteenth-note synth bass and an 80s drum machine (gated snare) under
+  futuristic keyboard leads (detuned saw and square synths). It's synthesized
+  live with Web Audio, with no audio files. Themes are shared across stages the
+  way the walkthrough says the original's were:
+  - stage 1 has its own;
+  - stages 2 and 6 share one;
+  - area 3 (stages 3-5 and 10) shares one;
+  - stage 7 has its own;
+  - stages 8, 9 and 11 share one.
+
+  There are jingles for stage clear, area clear and game over, and an anthem for
+  the ending and name entry. The songs are data in `src/audio/songs.ts`; M mutes.
 - **Balance:** enemy marksmanship ramps up over the stages. In stage 1, aimed
   shots stray up to about 22° either side, volleys come 60% less often, shells
   fly at three-quarter speed (but just as far), and missiles turn half as

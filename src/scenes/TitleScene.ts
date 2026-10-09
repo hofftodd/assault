@@ -32,6 +32,8 @@ export class TitleScene extends Phaser.Scene {
     this.cameras.main.setZoom(ART_SCALE).centerOn(112, 144);
     this.session = this.registry.get(SESSION_KEY);
     this.sfx = this.registry.get(SFX_KEY);
+    // The attract screen is silent, as in the arcade.
+    this.sfx.music(null);
     this.starting = false;
     this.elapsed = 0;
     this.cameras.main.setBackgroundColor(0x000000).fadeIn(300);

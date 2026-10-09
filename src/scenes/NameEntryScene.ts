@@ -35,6 +35,7 @@ export class NameEntryScene extends Phaser.Scene {
     this.cameras.main.setZoom(ART_SCALE).centerOn(112, 144);
     this.session = this.registry.get(SESSION_KEY);
     this.sfx = this.registry.get(SFX_KEY);
+    this.sfx.music('ending');
     this.name = '';
     this.letter = 0;
     this.left = TIME_LIMIT;

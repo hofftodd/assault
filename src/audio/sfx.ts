@@ -1,3 +1,6 @@
+import { MusicPlayer } from './music';
+import { SONGS, type TrackName } from './songs';
+
 /**
  * Retro sound effects synthesised with Web Audio, so there are no sample files.
  * Browsers only allow audio after user input, so the context is created on the
@@ -23,6 +26,9 @@ export type SfxName =
 
 export class Sfx {
   private ctx: AudioContext | null = null;
+  private player: MusicPlayer | null = null;
+  /** The track the game wants playing, kept until the audio is unlocked by a key or click. */
+  private wanted: TrackName | null = null;
   private master: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   muted = false;
@@ -39,6 +45,18 @@ export class Sfx {
   toggleMute(): void {
     this.muted = !this.muted;
     if (this.master) this.master.gain.value = this.muted ? 0 : 0.5;
+  }
+
+  /** Play a soundtrack track from the top (null fades out). A looping theme already playing carries on. */
+  music(name: TrackName | null): void {
+    if (name && name === this.wanted && SONGS[name].loop && this.player?.current === name) return;
+    this.wanted = name;
+    this.player?.play(name);
+  }
+
+  /** The track last asked for (for tests and the debug readout). */
+  get track(): TrackName | null {
+    return this.wanted;
   }
 
   play(name: SfxName): void {
@@ -120,6 +138,9 @@ export class Sfx {
     this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const ch = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
+    this.player = new MusicPlayer(this.ctx, this.master, this.noise);
+    // Music asked for before the first key press starts now (a stale jingle doesn't).
+    if (this.wanted && SONGS[this.wanted].loop) this.player.play(this.wanted);
   }
 
   /** A pitch sweep with a fast attack and exponential decay. */

@@ -272,7 +272,6 @@ export class GameScene extends Phaser.Scene {
       case 'blast':
         (window as unknown as { __assault: { blasts: Blast[] } }).__assault.blasts.push(e.blast);
         if (e.blast.kind === 'nuke') {
-          this.explosion(e.blast.x, e.blast.y, 'blastAnim');
           this.shockwave(e.blast.x, e.blast.y, e.blast.radius);
           this.cameras.main.shake(250, 0.012);
           this.sfx.play('nukeBlast');
@@ -364,10 +363,15 @@ export class GameScene extends Phaser.Scene {
   private shockwave(x: number, y: number, radius: number): void {
     const t = this.world.tank;
     const dim = this.add.rectangle(t.x, t.y, 800, 800, 0x000000, 0.5).setDepth(Depth.Explosion - 0.5);
-    const ring = this.add.image(x, y, 'shockwave').setDepth(Depth.Explosion + 0.5).setScale(0.15);
     const full = radius / 32;
-    this.tweens.add({ targets: ring, scale: full, duration: 380, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: ring, alpha: 0, delay: 380, duration: 260, onComplete: () => ring.destroy() });
+    // A quick white flash at ground zero, then the ring (and a fainter echo) sweeps out.
+    const flash = this.add.circle(x, y, radius * 0.5, 0xffffff, 0.85).setDepth(Depth.Explosion);
+    this.tweens.add({ targets: flash, alpha: 0, scale: 0.3, duration: 220, onComplete: () => flash.destroy() });
+    for (const [delay, alpha] of [[0, 1], [110, 0.5]] as const) {
+      const ring = this.add.image(x, y, 'shockwave').setDepth(Depth.Explosion + 0.5).setScale(0.1).setAlpha(alpha);
+      this.tweens.add({ targets: ring, scale: full, delay, duration: 420, ease: 'Cubic.easeOut' });
+      this.tweens.add({ targets: ring, alpha: 0, delay: delay + 420, duration: 300, onComplete: () => ring.destroy() });
+    }
     this.tweens.add({ targets: dim, alpha: 0, delay: 250, duration: 400, onComplete: () => dim.destroy() });
   }
 

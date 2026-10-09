@@ -1,4 +1,4 @@
-import type { Maneuver } from '../input/maneuver';
+import { steering, type Maneuver } from '../input/maneuver';
 import {
   angleDiff,
   ENEMIES,
@@ -330,7 +330,8 @@ export class World {
     if (raised) {
       // Aloft: the tank can turn to aim, but not drive, roll or wheelie.
       this.raised = Math.max(0, this.raised - dt);
-      if (maneuver === 'turnLeft' || maneuver === 'turnRight') stepTank(this.tank, maneuver, dt, this.playerGround);
+      const turn = steering(maneuver);
+      if (turn) stepTank(this.tank, turn < 0 ? 'turnLeft' : 'turnRight', dt, this.playerGround);
       if (this.raised === 0) this.events.push({ type: 'landed' });
     } else {
       const wasRolling = this.tank.mode === 'roll';

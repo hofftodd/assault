@@ -30,14 +30,16 @@ export function crosshairArt(): Rgba {
 
 /** A thin white ring for the nuke shockwave; the scene scales it up as it expands. */
 export function shockwaveArt(radius = 32): Rgba {
-  const size = radius * 2 + 3;
+  const size = radius * 2 + 9;
   const p = new Painter(size, size);
   const c = (size - 1) / 2;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const d = Math.hypot(x - c, y - c);
-      if (Math.abs(d - radius) < 0.8) p.px(x, y, [255, 255, 255]);
-      else if (Math.abs(d - radius) < 1.6) p.px(x, y, [170, 210, 255], 160);
+      const off = Math.abs(d - radius);
+      if (off < 1.2) p.px(x, y, [255, 255, 255]);
+      else if (off < 2.2) p.px(x, y, [190, 220, 255], 170);
+      else if (off < 3.2) p.px(x, y, [120, 170, 255], 70);
     }
   }
   return p.toRgba();

@@ -29,7 +29,7 @@ npm run art        # renders sprites/terrain/font to smoke-output/art/ for inspe
 | Keys | Move |
 |---|---|
 | ↑ / ↓ | Drive forward / reverse |
-| ← / → | Turn left / right |
+| ← / → | Turn left / right; hold with ↑ or ↓ to steer while driving |
 | ← + → together | Wheelie: the tank rears up and a crosshair slides out; fire launches a nuke |
 | Double-tap ← or → | Roll (flip over sideways) that way |
 | Space | Fire |

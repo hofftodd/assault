@@ -1,4 +1,4 @@
-import type { Maneuver } from '../input/maneuver';
+import { drive, steering, type Maneuver } from '../input/maneuver';
 import type { Terrain } from './terrain';
 
 export type TankMode = 'drive' | 'roll' | 'wheelie';
@@ -109,20 +109,12 @@ export function stepTank(t: Tank, maneuver: Maneuver, dt: number, terrain: Terra
   }
   if (t.mode === 'wheelie' || t.lift > 0) return;
 
-  switch (maneuver) {
-    case 'forward':
-    case 'back': {
-      const v = forwardVector(t.heading);
-      const d = (maneuver === 'forward' ? T.forwardSpeed : -T.backSpeed) * speed * dt;
-      moveBy(t, terrain, v.x * d, v.y * d, r);
-      break;
-    }
-    case 'turnLeft':
-      t.heading -= T.turnRate * dt;
-      break;
-    case 'turnRight':
-      t.heading += T.turnRate * dt;
-      break;
+  t.heading += steering(maneuver) * T.turnRate * dt;
+  const go = drive(maneuver);
+  if (go !== 0) {
+    const v = forwardVector(t.heading);
+    const d = (go > 0 ? T.forwardSpeed : -T.backSpeed) * speed * dt;
+    moveBy(t, terrain, v.x * d, v.y * d, r);
   }
   t.heading = ((t.heading % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
 }

@@ -7,6 +7,11 @@ export type Maneuver =
   | 'back'
   | 'turnLeft'
   | 'turnRight'
+  /** Driving while steering (arrow keys). */
+  | 'forwardLeft'
+  | 'forwardRight'
+  | 'backLeft'
+  | 'backRight'
   | 'rollLeft'
   | 'rollRight'
   | 'wheelie';
@@ -27,4 +32,18 @@ const TABLE: Record<string, Maneuver> = {
 
 export function resolveManeuver(left: Dir, right: Dir): Maneuver {
   return TABLE[`${left},${right}`] ?? 'idle';
+}
+
+/** Which way a maneuver turns the hull: -1 left, 1 right, 0 not at all. */
+export function steering(m: Maneuver): -1 | 0 | 1 {
+  if (m === 'turnLeft' || m === 'forwardLeft' || m === 'backLeft') return -1;
+  if (m === 'turnRight' || m === 'forwardRight' || m === 'backRight') return 1;
+  return 0;
+}
+
+/** Whether a maneuver drives the tank: 1 forward, -1 back, 0 not at all. */
+export function drive(m: Maneuver): -1 | 0 | 1 {
+  if (m === 'forward' || m === 'forwardLeft' || m === 'forwardRight') return 1;
+  if (m === 'back' || m === 'backLeft' || m === 'backRight') return -1;
+  return 0;
 }

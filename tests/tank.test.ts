@@ -43,6 +43,13 @@ describe('driving', () => {
     expect(t.y).toBeCloseTo(100);
   });
 
+  it('drives and turns at the same time when steering', () => {
+    const t = run(createTank(100, 100), 'forwardRight', 0.5);
+    expect(t.heading).toBeCloseTo(TANK_TUNING.turnRate * 0.5, 1);
+    expect(t.y).toBeLessThan(90);
+    expect(t.x).toBeGreaterThan(100);
+  });
+
   it('keeps heading within [0, 2π)', () => {
     const t = run(createTank(0, 0), 'turnLeft', 0.2);
     expect(t.heading).toBeGreaterThanOrEqual(0);

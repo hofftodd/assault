@@ -119,11 +119,14 @@ describe('arrow controls', () => {
     expect(kb.maneuver).toBe('idle');
   });
 
-  it('turning takes priority over driving', () => {
-    const { kb, down } = arrows();
+  it('steers while driving forward or back', () => {
+    const { kb, down, up } = arrows();
     down('ArrowUp');
     down('ArrowRight');
-    expect(kb.maneuver).toBe('turnRight');
+    expect(kb.maneuver).toBe('forwardRight');
+    up('ArrowUp');
+    down('ArrowDown');
+    expect(kb.maneuver).toBe('backRight');
   });
 
   it('pops a wheelie with left and right together', () => {

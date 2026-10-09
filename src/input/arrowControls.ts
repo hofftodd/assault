@@ -10,9 +10,9 @@ export const ARROW_TUNING = {
 type Arrow = 'up' | 'down' | 'left' | 'right';
 
 /**
- * Simplified one-handed controls on the arrow keys, mapped onto the original's
- * maneuvers: up/down drive, left/right turn, left+right together pops a wheelie,
- * and a quick double tap of left or right rolls that way.
+ * Simplified one-handed controls on the arrow keys: up/down drive, left/right
+ * turn (and steer while driving), left+right together pops a wheelie, and a
+ * quick double tap of left or right rolls that way.
  */
 export class ArrowControls {
   private held = new Set<Arrow>();
@@ -52,10 +52,11 @@ export class ArrowControls {
     this.roll = null;
     const h = this.held;
     if (h.has('left') && h.has('right')) return 'wheelie';
-    if (h.has('left')) return 'turnLeft';
-    if (h.has('right')) return 'turnRight';
-    if (h.has('up') && !h.has('down')) return 'forward';
-    if (h.has('down') && !h.has('up')) return 'back';
+    const go = h.has('up') && !h.has('down') ? 'forward' : h.has('down') && !h.has('up') ? 'back' : null;
+    const turn = h.has('left') ? 'Left' : h.has('right') ? 'Right' : null;
+    if (go && turn) return `${go}${turn}`;
+    if (go) return go;
+    if (turn) return `turn${turn}`;
     return 'idle';
   }
 }

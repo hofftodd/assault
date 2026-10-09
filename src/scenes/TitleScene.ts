@@ -81,7 +81,7 @@ export class TitleScene extends Phaser.Scene {
       text(112, 66, 'ARROW KEYS', HUD_WHITE),
       ...rows(84, [
         ['UP / DOWN', 'DRIVE / REVERSE'],
-        ['LEFT / RIGHT', 'TURN'],
+        ['LEFT / RIGHT', 'TURN / STEER'],
         ['LEFT+RIGHT', 'WHEELIE, AIM NUKE'],
         ['TAP TAP L/R', 'ROLL SIDEWAYS'],
         ['SPACE', 'FIRE'],

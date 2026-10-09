@@ -43,17 +43,17 @@ type Patch = FmPatch | SynthPatch;
 
 const PATCHES: Record<LeadVoice | 'bass' | 'arp' | 'pad', Patch> = {
   // The alien lead: wide-detuned saws through a squelchy resonant filter, deep slow vibrato.
-  alien: { kind: 'synth', wave: 'sawtooth', detune: 30, cutoff: 2000, cutoffEnd: 620, resonance: 11, vibrato: 0.014, attack: 0.015, decay: 0.35, sustain: 0.8, release: 0.18, vol: 0.085 },
+  alien: { kind: 'synth', wave: 'sawtooth', detune: 30, cutoff: 2000, cutoffEnd: 620, resonance: 11, vibrato: 0.014, attack: 0.015, decay: 0.35, sustain: 0.8, release: 0.18, vol: 0.055 },
   synth: { kind: 'synth', wave: 'sawtooth', detune: 14, cutoff: 5200, cutoffEnd: 2200, resonance: 5, vibrato: 0.007, attack: 0.012, decay: 0.3, sustain: 0.75, release: 0.12, vol: 0.075 },
-  pulse: { kind: 'synth', wave: 'square', detune: 18, cutoff: 2200, cutoffEnd: 620, resonance: 9, vibrato: 0.012, attack: 0.01, decay: 0.3, sustain: 0.75, release: 0.15, vol: 0.07 },
+  pulse: { kind: 'synth', wave: 'square', detune: 18, cutoff: 2200, cutoffEnd: 620, resonance: 9, vibrato: 0.012, attack: 0.01, decay: 0.3, sustain: 0.75, release: 0.15, vol: 0.048 },
   brass: { kind: 'fm', ratio: 1, index: 2.6, indexEnd: 0.9, attack: 0.03, decay: 0.25, sustain: 0.75, release: 0.08, vol: 0.13 },
-  // The driving bass riff: a growling FM tone with a sub-octave modulator, held for
-  // nearly the whole sixteenth so the riff runs unbroken.
-  bass: { kind: 'fm', ratio: 0.5, index: 3.6, indexEnd: 0.7, attack: 0.003, decay: 0.12, sustain: 0.8, release: 0.03, vol: 0.28 },
+  // The driving bass riff: a growling FM tone with a sub-octave modulator, held
+  // legato so the riff runs unbroken; it carries most of the mix.
+  bass: { kind: 'fm', ratio: 0.5, index: 2.4, indexEnd: 0.45, attack: 0.003, decay: 0.14, sustain: 0.85, release: 0.04, vol: 0.44 },
   // Alien chimes: inharmonic FM bells, metallic and cold.
-  arp: { kind: 'fm', ratio: 3.73, index: 1.6, indexEnd: 0.1, attack: 0.002, decay: 0.14, sustain: 0.12, release: 0.08, vol: 0.03 },
+  arp: { kind: 'fm', ratio: 3.73, index: 1.6, indexEnd: 0.1, attack: 0.002, decay: 0.14, sustain: 0.12, release: 0.08, vol: 0.024 },
   // A dark drone under each bar: detuned saws, filtered right down, swelling in slowly.
-  pad: { kind: 'synth', wave: 'sawtooth', detune: 22, cutoff: 900, cutoffEnd: 480, resonance: 3, vibrato: 0.004, attack: 0.45, decay: 1.2, sustain: 0.85, release: 0.5, vol: 0.035 },
+  pad: { kind: 'synth', wave: 'sawtooth', detune: 22, cutoff: 900, cutoffEnd: 480, resonance: 3, vibrato: 0.004, attack: 0.45, decay: 1.2, sustain: 0.85, release: 0.5, vol: 0.02 },
 };
 
 /**
@@ -100,7 +100,7 @@ export class MusicPlayer {
     const feedback = ctx.createGain();
     feedback.gain.value = 0.42;
     const wet = ctx.createGain();
-    wet.gain.value = 0.4;
+    wet.gain.value = 0.3;
     this.echoIn.connect(delay).connect(tone).connect(feedback).connect(delay);
     tone.connect(wet).connect(this.bus);
   }
@@ -189,8 +189,9 @@ export class MusicPlayer {
     const end = at + dur + p.release * 2;
     const amp = ctx.createGain();
     amp.gain.setValueAtTime(0, at);
-    amp.gain.linearRampToValueAtTime(p.vol, at + p.attack);
-    amp.gain.setTargetAtTime(p.vol * p.sustain, at + p.attack, p.decay / 3);
+    const vol = p.vol * (n.vel ?? 1);
+    amp.gain.linearRampToValueAtTime(vol, at + p.attack);
+    amp.gain.setTargetAtTime(vol * p.sustain, at + p.attack, p.decay / 3);
     amp.gain.setTargetAtTime(0, at + dur, p.release / 3);
     amp.connect(out);
     if (n.part !== 'bass') amp.connect(t.send);
@@ -291,11 +292,11 @@ export class MusicPlayer {
         break;
       case 'snare':
         tone(240, 160, 0.22, 0.09);
-        noise('bandpass', 1900, 0.42, 0.2, true);
-        noise('highpass', 5000, 0.12, 0.12);
+        noise('bandpass', 2300, 0.42, 0.2, true);
+        noise('highpass', 4500, 0.3, 0.14);
         break;
       case 'hat':
-        noise('highpass', 8000, 0.07, 0.035);
+        noise('highpass', 6000, 0.22, 0.06);
         break;
       case 'crash':
         noise('highpass', 3500, 0.16, 1.0);

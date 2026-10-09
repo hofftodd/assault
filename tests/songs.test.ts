@@ -39,11 +39,22 @@ describe('the soundtrack', () => {
     expect(seconds('clear')).toBeLessThan(WORLD_TUNING.clearMessageTime + WORLD_TUNING.bonusMessageTime);
   });
 
-  it('drives every theme with an unbroken sixteenth-note bass riff', () => {
+  it('drives every theme with an unbroken bass riff and a kick on every beat', () => {
     for (const name of ['stage1', 'land', 'river', 'base1', 'base2', 'areaClear', 'ending'] as const) {
       const c = compile(SONGS[name]);
-      const steps = new Set(c.notes.filter((n) => n.part === 'bass').map((n) => n.step));
-      for (let i = 0; i < c.steps; i++) expect(steps.has(i), `${name}: no bass on step ${i}`).toBe(true);
+      const sounding = new Set<number>();
+      for (const n of c.notes) if (n.part === 'bass') for (let i = n.step; i < n.step + n.len; i++) sounding.add(i);
+      for (let i = 0; i < c.steps; i++) expect(sounding.has(i), `${name}: no bass sounding on step ${i}`).toBe(true);
+      const kicks = new Set(c.drums.filter((d) => d.kind === 'kick').map((d) => d.step));
+      const beat = name === 'ending' ? 8 : 4;
+      for (let i = 0; i < c.steps; i += beat) expect(kicks.has(i), `${name}: no kick on step ${i}`).toBe(true);
+    }
+  });
+
+  it('keeps the themes driving: 158-172 bpm', () => {
+    for (const name of ['stage1', 'land', 'river', 'base1', 'base2'] as const) {
+      expect(SONGS[name].bpm).toBeGreaterThanOrEqual(158);
+      expect(SONGS[name].bpm).toBeLessThanOrEqual(172);
     }
   });
 

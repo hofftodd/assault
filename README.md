@@ -164,9 +164,13 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   and up the winding north-eastern paths, then take the twelve-cannon battery
   (four each of Types 1, 2 and 3). The launch pad sends you back to the enemy
   base for stage 11.
-- **Music:** an original soundtrack in the spirit of the arcade board: driving
-  sixteenth-note synth bass and an 80s drum machine (gated snare) under dark,
-  alien keyboard leads. The leads are squelchy wide-detuned saws that glide
+- **Music:** an original soundtrack in the spirit of the arcade board. Fast
+  (158-172 bpm) four-on-the-floor drums with a gated snare drive it, and a
+  heavy, legato eighth-note bass riff carries most of the mix: accented on the
+  beat, it leaps by fourths, fifths, octaves and tritones. Dark, alien keyboard
+  leads sit over the top. The tempo, beat and mix balance were matched by
+  measurement against a recording of an original track; the melodies,
+  progressions and riffs are new. The leads are squelchy wide-detuned saws that glide
   between notes and ring out into an echo, over metallic FM chimes and a low
   drone. The harmony stays dark: Phrygian seconds, and chords a half step or a
   tritone apart. It's synthesized live with Web Audio, with no audio files. Themes are shared across stages the

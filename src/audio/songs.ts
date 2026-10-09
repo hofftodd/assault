@@ -7,10 +7,11 @@
  * Melody tokens (one per eighth note, bars separated by '|' for readability):
  *   'A4' play a note   '-' hold the previous note   '.' rest   'A4/B4' two sixteenths
  * Templates (one character per sixteenth note, cycled bar by bar):
- *   bass  'R' root  'O' root an octave up  'F' fifth  'T' third  'S' flat second
- *         'V' flat seventh below  '-' hold  '.' rest
+ *   bass  'R' root  'O' root an octave up  'F' fifth  'Q' fourth  'X' tritone  'T' third
+ *         'S' flat second  'V' flat seventh below  '-' hold  '.' rest
+ *         (notes on the beat are accented)
  *   arp   '0' '1' '2' chord tones  '3' root an octave up  '.' rest
- *   drums 'k' kick  's' snare  'h' hat  'x' kick and hat  'c' crash  '.' rest
+ *   drums 'k' kick  's' snare  'h' hat  'x' kick and hat  'y' kick and snare  'c' crash  '.' rest
  */
 
 export type TrackName = 'stage1' | 'land' | 'river' | 'base1' | 'base2' | 'clear' | 'areaClear' | 'gameOver' | 'ending';
@@ -37,15 +38,15 @@ export interface Song {
 }
 
 export const SONGS: Record<TrackName, Song> = {
-  /** Stage 1: E Phrygian, the flattened second giving it a cold, alien edge. */
+  /** Stage 1: E Phrygian, the flattened second giving it a cold, alien edge. Four on the floor, as all the themes are. */
   stage1: {
-    bpm: 150,
+    bpm: 167,
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'RRORRFRORRORRSRO',
+    bass: 'R-O-F-R-X-F-O-Q-',
     arp: '0.1.2.1.0.1.2.1.',
-    drums: 'xhhhshhhxhxhshhh',
+    drums: 'xhhhyhhhxhhxyhhh',
     sections: {
       A: { chords: ['Em', 'F', 'Em', 'Bb'], melody: 'E4 - B4 - G4 - F4 E4 | F4 - - - A4 - C5 B4 | B4 - - - G4 - E4 F4 | Bb4 - - - D5 - F5 E5' },
       B: { chords: ['Cm', 'B', 'Em', 'Em'], melody: 'C5 - Eb5 - G5 - F#5 G5 | D#5 - - - F#5 - B4 - | E5 - D5 - B4 - G4 F4 | E4 - - - - - . .' },
@@ -55,13 +56,13 @@ export const SONGS: Record<TrackName, Song> = {
   },
   /** Stages 2 and 6 (the original reuses one theme for both): D minor sliding to E flat and B flat minor. */
   land: {
-    bpm: 140,
+    bpm: 162,
     loop: true,
     lead: 'pulse',
     pad: true,
-    bass: 'RRRORRFRRRORRVRF',
+    bass: 'R-R-O-R-Q-R-X-F-',
     arp: '0.2.1.2.0.2.1.2.',
-    drums: 'xhhhshhhxhhxshhh',
+    drums: 'xhhhyhhhxhhhyhxh',
     sections: {
       A: { chords: ['Dm', 'Eb', 'Dm', 'Bbm'], melody: 'D5 - - - A4 - D5 Eb5 | Eb5 - - - G5 - Bb4 - | A4 - F4 - D4 - A4 - | Bb4 - - - Db5 - F5 -' },
       B: { chords: ['Gm', 'Ab', 'Dm', 'A'], melody: 'G4 - Bb4 - D5 - G5 - | Ab4 - C5 - Eb5 - Ab5 - | F5 - E5 - D5 - A4 - | C#5 - - - E5 - A4 -' },
@@ -71,13 +72,13 @@ export const SONGS: Record<TrackName, Song> = {
   },
   /** Area 3, stages 3-5 and 10: a stalking groove, E minor creeping up to F minor and back. */
   river: {
-    bpm: 132,
+    bpm: 158,
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'RROFRROFRROFRRSO',
+    bass: 'R-F-O-F-R-S-X-F-',
     arp: '0..1..2.3..2..1.',
-    drums: 'xhhhshxhxhhhshxh',
+    drums: 'xhhhyhhxxhhhyhhh',
     sections: {
       A: { chords: ['Em', 'Fm', 'Em', 'Fm'], melody: 'E5 - G5 - B5 - Bb5 A5 | Ab5 - - - F5 - C5 - | B4 - E5 - G5 - F#5 E5 | F5 - Ab5 - C6 - - -' },
       B: { chords: ['Cm', 'B', 'Am', 'B'], melody: 'G5 - - - Eb5 - C5 - | D#5 - - - F#5 - B4 - | A4 - C5 - E5 - G5 F5 | F#5 - - - D#5 - B4 -' },
@@ -87,13 +88,13 @@ export const SONGS: Record<TrackName, Song> = {
   },
   /** Stage 7, inside the enemy base: C minor against D flat and a tritone away, G flat. */
   base1: {
-    bpm: 156,
+    bpm: 170,
     loop: true,
     lead: 'pulse',
     pad: true,
-    bass: 'RRRRORRRRRRRORSR',
+    bass: 'R-O-R-O-X-O-Q-F-',
     arp: '0123012301230123',
-    drums: 'xhxhshxhxhxhshxx',
+    drums: 'xhxhyhxhxhxhyhxx',
     sections: {
       A: { chords: ['Cm', 'Db', 'Cm', 'Gb'], melody: 'C5 - Eb5 - G5 - C6 - | Db6 - C6 - Ab5 - F5 - | G5 - Eb5 - C5 - G4 - | Gb4 - Bb4 - Db5 - F5 -' },
       B: { chords: ['Abm', 'G', 'Cm', 'G'], melody: 'Ab4 - B4 - Eb5 - Ab5 - | G5 - - - D5 - B4 - | C5 - Eb5 - G5 - Ab5 G5 | G5 - F5 - Eb5 - D5 -' },
@@ -102,13 +103,13 @@ export const SONGS: Record<TrackName, Song> = {
   },
   /** Stages 8, 9 and 11, the base's last theme: urgent, F sharp minor against G and C. */
   base2: {
-    bpm: 164,
+    bpm: 172,
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'RORFRORFRORFRSRO',
+    bass: 'R-O-F-O-R-X-F-S-',
     arp: '0.1.2.3.2.1.0.1.',
-    drums: 'xhhxshhxxhhxshsx',
+    drums: 'xhhxyhhxxhhxyhyx',
     sections: {
       A: { chords: ['F#m', 'G', 'F#m', 'C'], melody: 'F#5 - - - C#5 - F#5 A5 | G5 - - - D5 - B4 - | A4 - C#5 - F#5 - A5 G5 | G5 - E5 - C5 - - -' },
       B: { chords: ['Dm', 'C#', 'F#m', 'C#'], melody: 'D5 - F5 - A5 - D6 - | C#6 - - - G#5 - F5 - | F#5 - A5 - C#6 - B5 A5 | G#5 - - - F5 - C#5 -' },
@@ -127,13 +128,13 @@ export const SONGS: Record<TrackName, Song> = {
   },
   /** Leaving an area by hatch or launch pad: G minor rising to a G major landing. */
   areaClear: {
-    bpm: 140,
+    bpm: 150,
     loop: false,
     lead: 'alien',
     pad: true,
-    bass: 'RRORRFRORRORRFRO',
+    bass: 'R-O-F-O-R-O-F-O-',
     arp: '0.1.2.3.0.1.2.3.',
-    drums: 'c.h.s.h.k.h.s.h.',
+    drums: 'chhhyhhhxhhhyhhh',
     sections: { A: { chords: ['Gm', 'Eb', 'F', 'G'], melody: 'G4 - Bb4 - D5 - G5 - | Eb5 - G5 - Bb5 - - - | F5 - A5 - C6 - - - | B5 - - - G5 - - -' } },
     order: ['A'],
   },
@@ -149,18 +150,18 @@ export const SONGS: Record<TrackName, Song> = {
   },
   /** The ending and the high-score entry: a slow anthem, the war over, still a little strange. */
   ending: {
-    bpm: 96,
+    bpm: 104,
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'RRORRRORRRORRROR',
+    bass: 'R-O-F-O-R-O-F-O-',
     arp: '0.1.2.1.0.1.2.1.',
-    drums: 'k.......s.......',
+    drums: 'k.......y.......',
     sections: {
       A: { chords: ['C', 'G', 'Am', 'F'], melody: 'E5 - - - D5 - C5 - | D5 - - - G4 - - - | C5 - - - E5 - A5 - | A5 - G5 - F5 - - -' },
       B: { chords: ['Ab', 'Bb', 'F', 'C'], melody: 'Eb5 - - - C5 - Ab4 - | D5 - - - Bb4 - F4 - | A4 - C5 - F5 - A5 - | G5 - - - - - . .' },
     },
-    order: ['A', 'B'],
+    order: ['A', 'B', 'A', 'B'],
   },
 };
 
@@ -182,6 +183,8 @@ export interface NoteEvent {
   step: number;
   len: number;
   freq: number;
+  /** Loudness, 0-1 (accents); 1 when absent. */
+  vel?: number;
 }
 
 export interface DrumEvent {
@@ -218,7 +221,7 @@ export function chordTones(name: string, octave: number): number[] {
 
 const midiFreq = (n: number) => 440 * 2 ** ((n - 69) / 12);
 
-const DRUMS: Record<string, DrumKind[]> = { k: ['kick'], s: ['snare'], h: ['hat'], x: ['kick', 'hat'], c: ['crash', 'kick'] };
+const DRUMS: Record<string, DrumKind[]> = { k: ['kick'], s: ['snare'], h: ['hat'], x: ['kick', 'hat'], y: ['kick', 'snare'], c: ['crash', 'kick'] };
 
 /** Turn a song into timed note and drum events. */
 export function compile(song: Song): Compiled {
@@ -257,9 +260,9 @@ export function compile(song: Song): Compiled {
       const low = chordTones(chord, 2);
       const mid = chordTones(chord, 4);
       if (song.bass) layTemplate(song.bass, bar + b, (ch, step, len) => {
-        const offset: Record<string, number> = { R: 0, O: 12, F: 7, T: low[1] - low[0], S: 1, V: -2 };
+        const offset: Record<string, number> = { R: 0, O: 12, F: 7, Q: 5, X: 6, T: low[1] - low[0], S: 1, V: -2 };
         const n = ch in offset ? low[0] + offset[ch] : null;
-        if (n !== null) notes.push({ part: 'bass', step: start + step, len, freq: midiFreq(n) });
+        if (n !== null) notes.push({ part: 'bass', step: start + step, len, freq: midiFreq(n), vel: step % 4 === 0 ? 1 : 0.78 });
       });
       if (song.arp) layTemplate(song.arp, bar + b, (ch, step, len) => {
         const n = ch === '3' ? mid[0] + 12 : /[012]/.test(ch) ? mid[Number(ch)] : null;

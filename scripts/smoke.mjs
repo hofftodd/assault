@@ -22,7 +22,8 @@ try {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', (e) => errors.push(String(e)));
 
-  await page.goto('http://localhost:4173/');
+  // Phase 1: controls and weapons, with no enemies around.
+  await page.goto('http://localhost:4173/?peaceful');
   await page.waitForFunction(() => window.__assault?.tank, null, { timeout: 15000 });
   const tank = () => page.evaluate(() => ({ ...window.__assault.tank }));
   const hold = async (keys, ms) => {
@@ -42,6 +43,8 @@ try {
 
   // Facing the cliffs around the void island: shots fly up and burst on the rock.
   for (let i = 0; i < 5; i++) await page.keyboard.press('Space');
+  // Presses are handled one per tick; give the game a few frames to catch up.
+  await page.waitForTimeout(100);
   const salvo = await weapons();
   check(salvo.shots === 3, `rapid fire is capped at three shots on screen (${salvo.shots})`);
   await page.waitForTimeout(60);
@@ -89,15 +92,52 @@ try {
   await hold(['KeyA', 'KeyL'], 300);
   await page.keyboard.press('Space');
   await page.keyboard.press('Space');
+  await page.waitForTimeout(100);
   const launched = await weapons();
   check(launched.nukes === 1, `fire during a wheelie launches one nuke (${launched.nukes})`);
   check(launched.cooldown > 2, `a second nuke is refused while recharging (cooldown ${launched.cooldown.toFixed(2)} s)`);
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(300);
   await shot('06-nuke-in-flight');
   await page.waitForTimeout(600);
   await shot('07-nuke-blast');
   await release(['KeyA', 'KeyL']);
   check((await blastKinds()).includes('nuke'), 'the nuke explodes where it lands');
+
+  // Phase 2: combat against the test map's enemies.
+  await page.goto('http://localhost:4173/');
+  await page.waitForFunction(() => window.__assault?.world, null, { timeout: 15000 });
+  const world = () =>
+    page.evaluate(() => {
+      const w = window.__assault.world;
+      return { state: w.state, score: w.score, lives: w.lives, enemies: w.enemies.map((e) => e.kind), craters: w.craters.length };
+    });
+  const initial = await world();
+  check(initial.enemies.length === 18 && initial.lives === 3 && initial.score === 0, `enemies are placed (${initial.enemies.length}), 3 lives, score 0`);
+
+  // Park below the four-way pillbox, facing it, and shoot it.
+  await page.evaluate(() => Object.assign(window.__assault.world.tank, { x: 30.5 * 16, y: 17.5 * 16 + 70, heading: 0 }));
+  await page.waitForTimeout(100);
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(600);
+  const afterKill = await world();
+  check(!afterKill.enemies.includes('torchika1') && afterKill.score >= 200, `a shot destroys the pillbox and scores (score ${afterKill.score})`);
+  await shot('08-combat');
+
+  // Sit still in front of the tank squad until their fire gets through.
+  await page.waitForFunction(() => window.__assault.world.state === 'dying', null, { timeout: 15000 }).catch(() => {});
+  const hit = await world();
+  check(hit.state === 'dying' && hit.lives === 2, `enemy fire destroys the tank (state ${hit.state}, lives ${hit.lives})`);
+  await page.waitForTimeout(300);
+  await shot('09-you-were-hit');
+
+  // Lose the remaining lives: the game ends, then starts afresh.
+  await page.evaluate(() => (window.__assault.world.lives = 0));
+  await page.waitForFunction(() => window.__assault.world.state === 'gameOver', null, { timeout: 5000 }).catch(() => {});
+  check((await world()).state === 'gameOver', 'losing the last life ends the game');
+  await shot('10-game-over');
+  await page.waitForFunction(() => window.__assault.world.state === 'playing' && window.__assault.world.lives === 3, null, { timeout: 8000 }).catch(() => {});
+  const fresh = await world();
+  check(fresh.state === 'playing' && fresh.lives === 3 && fresh.score === 0 && fresh.enemies.length === 18, 'a fresh game starts after GAME OVER');
 
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {

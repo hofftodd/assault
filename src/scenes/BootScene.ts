@@ -1,8 +1,10 @@
 import Phaser from 'phaser';
+import { bulletArt, cannonArt, craterArt, missileArt, torchikaArt, TYPE1_TANK, TYPE2_TANK, TYPE5_TANK } from '../art/enemySprites';
 import { renderExplosion } from '../art/explosions';
 import { LIFE_ICON, NUKE_SHELL, PLAYER_TANK, PLAYER_TANK_BELLY, SHOT } from '../art/sprites';
-import { addAnimationStrip, addPixelArt, addPixelFont } from '../art/textures';
-import { createSession, SESSION_KEY } from '../session';
+import { addAnimationStrip, addPixelArt, addPixelFont, addRgbaTexture } from '../art/textures';
+import { Sfx } from '../audio/sfx';
+import { createSession, SESSION_KEY, SFX_KEY } from '../session';
 
 /** Builds every procedural texture, then starts play. */
 export class BootScene extends Phaser.Scene {
@@ -19,7 +21,20 @@ export class BootScene extends Phaser.Scene {
     addPixelArt(this, 'nukeShell', NUKE_SHELL);
     addAnimationStrip(this, 'sparkAnim', renderExplosion(12, 5, 3), 30);
     addAnimationStrip(this, 'blastAnim', renderExplosion(56, 10, 5), 16);
+    addAnimationStrip(this, 'boomAnim', renderExplosion(32, 8, 7), 20);
+    // Enemy textures are keyed by EnemyKind / ProjectileKind.
+    addRgbaTexture(this, 'type1', TYPE1_TANK());
+    addRgbaTexture(this, 'type2', TYPE2_TANK());
+    addRgbaTexture(this, 'type5', TYPE5_TANK());
+    addRgbaTexture(this, 'torchika1', torchikaArt(4));
+    addRgbaTexture(this, 'torchika2', torchikaArt(8));
+    addRgbaTexture(this, 'cannon1', cannonArt());
+    addRgbaTexture(this, 'orange', bulletArt('orange'));
+    addRgbaTexture(this, 'pink', bulletArt('pink'));
+    addRgbaTexture(this, 'missile', missileArt());
+    addRgbaTexture(this, 'crater', craterArt());
     this.registry.set(SESSION_KEY, createSession());
+    this.registry.set(SFX_KEY, new Sfx(window));
     this.scene.start('game');
     this.scene.launch('hud');
   }

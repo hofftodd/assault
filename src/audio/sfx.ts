@@ -3,7 +3,18 @@
  * Browsers only allow audio after user input, so the context is created on the
  * first key press.
  */
-export type SfxName = 'shot' | 'shotHit' | 'nukeLaunch' | 'nukeBlast' | 'roll' | 'empty';
+export type SfxName =
+  | 'shot'
+  | 'shotHit'
+  | 'nukeLaunch'
+  | 'nukeBlast'
+  | 'roll'
+  | 'empty'
+  | 'armorHit'
+  | 'enemyShot'
+  | 'enemyDie'
+  | 'playerDie'
+  | 'extend';
 
 export class Sfx {
   private ctx: AudioContext | null = null;
@@ -49,6 +60,23 @@ export class Sfx {
         break;
       case 'empty':
         this.tone('square', 180, 160, t, 0.05, 0.08);
+        break;
+      case 'armorHit':
+        this.tone('triangle', 1800, 900, t, 0.05, 0.15);
+        break;
+      case 'enemyShot':
+        this.tone('square', 520, 300, t, 0.07, 0.06);
+        break;
+      case 'enemyDie':
+        this.burst(t, 0.45, 2000, 120, 0.5);
+        this.tone('square', 300, 60, t, 0.3, 0.12);
+        break;
+      case 'playerDie':
+        this.burst(t, 1.4, 2500, 50, 0.9);
+        this.tone('sawtooth', 400, 30, t, 1.2, 0.3);
+        break;
+      case 'extend':
+        [523, 659, 784, 1047].forEach((f, i) => this.tone('square', f, f, t + i * 0.09, 0.12, 0.15));
         break;
     }
   }

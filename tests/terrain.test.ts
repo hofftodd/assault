@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Material, TileTerrain } from '../src/sim/terrain';
-import { TEST_MAP } from '../src/stages/testMap';
+import { TEST_MAP, TEST_SPAWNS } from '../src/stages/testMap';
 
 describe('TileTerrain', () => {
   const t = new TileTerrain(TEST_MAP, 16, 1);
@@ -43,6 +43,13 @@ describe('TileTerrain', () => {
           }
         }
       }
+    }
+  });
+
+  it('places every enemy on open ground', () => {
+    for (const s of TEST_SPAWNS) {
+      const m = t.tileAt(s.tx, s.ty);
+      expect(m === Material.Ground || m === Material.Rough, `${s.kind} at ${s.tx},${s.ty}`).toBe(true);
     }
   });
 

@@ -41,7 +41,8 @@ The original cabinet had two 4-way levers, one per hand. Here the left lever is
 burst against cliffs. You can fire while rolling. During a wheelie, fire lobs a
 nuke over obstacles that explodes about 120 px ahead; it then needs 2.5 s to
 recharge. **M** mutes the sound. In dev builds, **`** (backquote) toggles a
-readout of the levers, the current move and the nuke recharge.
+readout of the levers, the current move and the nuke recharge. Add `?peaceful`
+to the URL to drive around with no enemies.
 
 ## Layout
 
@@ -63,4 +64,12 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   turning, rolling and wheelieing on a test map while the world rotates around it.
 - **Milestone 2 (done):** regular shots (three on screen at most), wheelie
   nukes with arc, blast radius and recharge, explosions, and sound effects.
-- **Next:** enemies, damage, lives and score; then a faithful stage 1.
+- **Milestone 3 (done):** enemies on the test map (Type 1, 2 and 5 tanks, four-
+  and eight-way pillboxes, triple-barrel cannons). They wake as you approach,
+  close in from the flanks and fire orange shots, pink shots or homing
+  missiles; you can shoot missiles down. Enemies take hits as on StrategyWiki
+  and award its points. Nukes damage everything in the blast. Wrecked tanks
+  leave craters that slow you. One hit kills you ("YOU WERE HIT"); you get
+  three lives, an extra life at 20,000 points, and a fresh game after GAME OVER.
+- **Next:** a faithful stage 1, with its map, wave script, jump zone, timer and
+  time bonus, end cannons and exit; plus the title screen and high scores.

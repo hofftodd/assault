@@ -62,6 +62,7 @@ try {
   const { rasterizeFont } = await load('/src/art/font.ts');
   const { renderTerrain } = await load('/src/art/terrainRender.ts');
   const { renderExplosion } = await load('/src/art/explosions.ts');
+  const enemy = await load('/src/art/enemySprites.ts');
   const { TileTerrain } = await load('/src/sim/terrain.ts');
   const { TEST_MAP } = await load('/src/stages/testMap.ts');
 
@@ -77,6 +78,16 @@ try {
   write('nuke_shell.png', rasterize(sprites.NUKE_SHELL), 8);
   write('explosion_small.png', renderExplosion(12, 5, 3), 6);
   write('explosion_big.png', renderExplosion(56, 10, 5), 3);
+  write('enemy_type1.png', enemy.TYPE1_TANK(), 8);
+  write('enemy_type2.png', enemy.TYPE2_TANK(), 8);
+  write('enemy_type5.png', enemy.TYPE5_TANK(), 4);
+  write('enemy_torchika1.png', enemy.torchikaArt(4), 8);
+  write('enemy_torchika2.png', enemy.torchikaArt(8), 8);
+  write('enemy_cannon1.png', enemy.cannonArt(), 4);
+  write('bullet_orange.png', enemy.bulletArt('orange'), 8);
+  write('bullet_pink.png', enemy.bulletArt('pink'), 8);
+  write('missile.png', enemy.missileArt(), 8);
+  write('crater.png', enemy.craterArt(), 8);
   const t0 = performance.now();
   write('terrain_test_map.png', renderTerrain(new TileTerrain(TEST_MAP, 16, 1)), 2);
   console.log(`terrain rendered in ${Math.round(performance.now() - t0)} ms`);

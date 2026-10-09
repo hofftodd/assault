@@ -12,6 +12,7 @@ export class HudScene extends Phaser.Scene {
   private topScore!: Phaser.GameObjects.BitmapText;
   private lifeIcons: Phaser.GameObjects.Image[] = [];
   private debug!: Phaser.GameObjects.BitmapText;
+  private banner!: Phaser.GameObjects.BitmapText;
 
   constructor() {
     super('hud');
@@ -31,6 +32,7 @@ export class HudScene extends Phaser.Scene {
 
     for (let i = 0; i < MAX_LIFE_ICONS; i++) this.lifeIcons.push(this.add.image(9 + i * 9, 277, 'lifeIcon'));
 
+    this.banner = this.add.bitmapText(112, 118, FONT_KEY, '').setOrigin(0.5).setTint(HUD_PINK).setDropShadow(1, 1, 0x000000, 1);
     this.debug = this.add.bitmapText(220, 238, FONT_KEY, '').setOrigin(1, 0).setTint(0x9cf0c0).setDropShadow(1, 1, 0x000000, 1);
   }
 
@@ -40,6 +42,8 @@ export class HudScene extends Phaser.Scene {
     this.topScore.setText(String(Math.max(s.topScore, s.score)));
     // The life in play isn't shown, only the spares.
     this.lifeIcons.forEach((icon, i) => icon.setVisible(i < s.lives - 1));
+
+    this.banner.setText(s.message ?? '');
 
     this.debug.setVisible(s.showDebug);
     if (s.showDebug) {

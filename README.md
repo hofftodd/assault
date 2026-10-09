@@ -8,6 +8,10 @@ All art and sound are original and drawn procedurally. The files in `reference/`
 are drawing reference only and are never loaded by the game. The full design and
 requirements are in [`docs/DESIGN.md`](docs/DESIGN.md).
 
+| Title screen | Raised on a jump zone | A Generator overhead |
+| :---: | :---: | :---: |
+| ![The title screen: the ASSAULT logo over the player's tank](docs/screenshots/title.png) | ![Stage 1 from a jump zone: the zoomed-out view over the field of tanks, with the nuke crosshair](docs/screenshots/jump-zone.png) | ![Stage 4: a Generator hovers over the valley, dropping missiles](docs/screenshots/generator.png) |
+
 ## Running it
 
 Needs Node.js 20.19+ (22 LTS recommended) and **npm 11+**. npm 10.9 has a bug

@@ -92,8 +92,9 @@ export class TitleScene extends Phaser.Scene {
         ['S+I / W+K', 'TURN LEFT / RIGHT'],
         ['A+L', 'WHEELIE'],
         ['A+J / D+L', 'ROLL'],
+        ['W OR I ALONE', 'ARC RIGHT / LEFT'],
       ]),
-      text(112, 240, 'M  SOUND ON/OFF', HUD_PINK),
+      text(112, 254, 'M  SOUND ON/OFF', HUD_PINK),
     ]);
 
     this.add.bitmapText(10, 4, FONT_KEY, '1UPSCORE').setTint(HUD_PINK);

@@ -55,9 +55,15 @@ describe('KeyboardLevers', () => {
     expect(kb.maneuver).toBe('wheelie');
   });
 
-  it('does nothing with a single lever', () => {
+  it('arcs the tank with a single lever', () => {
     const { kb, down } = setup();
     down('KeyW');
+    expect(kb.maneuver).toBe('forwardRight');
+  });
+
+  it('does nothing with a single lever pushed sideways', () => {
+    const { kb, down } = setup();
+    down('KeyA');
     expect(kb.maneuver).toBe('idle');
   });
 

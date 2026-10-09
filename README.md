@@ -35,8 +35,7 @@ npm run art        # renders sprites/terrain/font to smoke-output/art/ for inspe
 | Space | Fire |
 
 **Arcade twin levers:** the original cabinet had two 4-way levers, one per hand.
-Here the left lever is **WASD** and the right lever is **IJKL**, and only these
-pairs do anything:
+Here the left lever is **WASD** and the right lever is **IJKL**:
 
 | Left lever | Right lever | Keys | Move |
 |---|---|---|---|
@@ -47,6 +46,10 @@ pairs do anything:
 | ← | ← | A + J | Roll left (flip over sideways) |
 | → | → | D + L | Roll right |
 | ← | → | A + L | Wheelie |
+| ↑ | – | W | Arc forward, curving right (one track drives) |
+| – | ↑ | I | Arc forward, curving left |
+| ↓ | – | S | Arc backward, swinging left |
+| – | ↓ | K | Arc backward, swinging right |
 
 Both schemes work at the same time. **Space** fires: tap or hold. At most three
 shots can be on screen, and they burst against cliffs. You can fire while

@@ -7,7 +7,7 @@ export type Maneuver =
   | 'back'
   | 'turnLeft'
   | 'turnRight'
-  /** Driving while steering (arrow keys). */
+  /** Driving while steering (arrow keys, or one lever on its own). */
   | 'forwardLeft'
   | 'forwardRight'
   | 'backLeft'
@@ -17,8 +17,10 @@ export type Maneuver =
   | 'wheelie';
 
 /**
- * The seven lever pairs printed on the original cabinet's instruction plate.
- * Any other combination, including a single lever on its own, does nothing.
+ * The seven lever pairs printed on the original cabinet's instruction plate,
+ * plus a single lever on its own, which drives one track and arcs the tank
+ * (left lever forward curves right, right lever forward curves left). Any other
+ * combination does nothing.
  */
 const TABLE: Record<string, Maneuver> = {
   'up,up': 'forward',
@@ -28,6 +30,10 @@ const TABLE: Record<string, Maneuver> = {
   'left,left': 'rollLeft',
   'right,right': 'rollRight',
   'left,right': 'wheelie',
+  'up,none': 'forwardRight',
+  'none,up': 'forwardLeft',
+  'down,none': 'backLeft',
+  'none,down': 'backRight',
 };
 
 export function resolveManeuver(left: Dir, right: Dir): Maneuver {

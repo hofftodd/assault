@@ -23,8 +23,14 @@ sign-in from cloud IPs. Memorial Land Forever (stage 2) has no write-up yet.
   roughly 100 sprites, and one camera transform for the world rotation.
 - **Input:** keyboard first. WASD = left lever, IJKL = right lever, Space = fire.
   Keys can be rebound. Gamepad support comes later behind the same abstraction.
-- **Only the 7 paired combinations on the cabinet plate act.** Single-lever input
-  and levers pushed together are ignored.
+- **The 7 paired combinations on the cabinet plate,** plus single-lever arcs (Todd
+  remembers driving and turning together, which matches Wikipedia's "turning is
+  done by moving only one joystick forward"): left lever forward arcs right, right
+  lever forward arcs left, and either lever back arcs backwards. Levers pushed
+  together are ignored.
+- **Arrow keys** (added after playtesting, since twin levers are hard on a
+  keyboard): up/down drive, left/right turn or steer while driving, left+right
+  together is the wheelie, and a double tap of left or right rolls.
 - **Art:** original retro pixel art in the 1988 style (Okawara-esque mecha), not
   ripped assets. **Native 224×288 portrait** (a vertical monitor, confirmed by
   StrategyWiki's original screenshot), integer-scaled (e.g. 3× = 672×864),

@@ -3,7 +3,7 @@ import { resolveManeuver, type Dir, type Maneuver } from '../src/input/maneuver'
 
 const DIRS: Dir[] = ['none', 'up', 'down', 'left', 'right'];
 
-// The original cabinet's instruction plate, lever by lever.
+// The original cabinet's instruction plate, plus single-lever arcs.
 const PLATE: [Dir, Dir, Maneuver][] = [
   ['up', 'up', 'forward'],
   ['down', 'down', 'back'],
@@ -12,6 +12,11 @@ const PLATE: [Dir, Dir, Maneuver][] = [
   ['left', 'left', 'rollLeft'],
   ['right', 'right', 'rollRight'],
   ['left', 'right', 'wheelie'],
+  // One lever on its own drives one track, arcing the tank.
+  ['up', 'none', 'forwardRight'],
+  ['none', 'up', 'forwardLeft'],
+  ['down', 'none', 'backLeft'],
+  ['none', 'down', 'backRight'],
 ];
 
 describe('resolveManeuver', () => {
@@ -19,7 +24,7 @@ describe('resolveManeuver', () => {
     expect(resolveManeuver(l, r)).toBe(expected);
   });
 
-  it('treats every other combination as idle, including single levers', () => {
+  it('treats every other combination as idle', () => {
     const acting = new Set(PLATE.map(([l, r]) => `${l},${r}`));
     let idle = 0;
     for (const l of DIRS) {

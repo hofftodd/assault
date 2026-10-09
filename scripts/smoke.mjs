@@ -61,7 +61,9 @@ try {
   await hold(['KeyW'], 400);
   await release(['KeyW']);
   const afterSingle = await tank();
-  check(afterSingle.x === afterForward.x && afterSingle.y === afterForward.y && afterSingle.heading === afterForward.heading, 'a single lever does nothing');
+  const arc = Math.hypot(afterSingle.x - afterForward.x, afterSingle.y - afterForward.y);
+  check(arc > 5 && afterSingle.heading > afterForward.heading, `the left lever alone arcs forward to the right (${arc.toFixed(1)} px)`);
+  await page.evaluate((h) => (window.__assault.tank.heading = h), afterForward.heading);
 
   await hold(['KeyW', 'KeyK'], 500);
   await release(['KeyW', 'KeyK']);

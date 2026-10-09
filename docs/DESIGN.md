@@ -68,6 +68,13 @@ sign-in from cloud IPs. Memorial Land Forever (stage 2) has no write-up yet.
 | ← | → | **Wheelie**: the tank stops, rears up, and fire launches a nuclear missile | A+L |
 - A fire button on each lever (keyboard: Space). **Max 3 regular shots on screen.**
 - **Nuke recharge is 2.5 s,** except while raised on a jump zone.
+- **Nuke aiming (from Todd's memory of the arcade):** during a wheelie a crosshair
+  appears close in front of the tank and slides out to the nuke's maximum range.
+  It is white while extending and turns red once at maximum range. Pulling the
+  trigger while it is still extending lobs the nuke shorter, to wherever the
+  crosshair is. Our choices: about 1.2 s to reach maximum range; after a launch
+  it snaps back in and extends again; the same crosshair is used while raised
+  on a jump zone.
 - Nukes fired during a wheelie also hit **airborne targets** (Generators hovering
   overhead).
 

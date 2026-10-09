@@ -109,14 +109,57 @@ describe('nukes', () => {
     expect(w.shots.length).toBe(0);
   });
 
-  it('lob forward in an arc and explode at the end of their range', () => {
+  it('show a crosshair that slides out from close range, reaching max range (red) after the aim time', () => {
     const w = new Weapons();
     const t = wheelie();
+    w.step(DT, t, idle, open);
+    expect(w.aiming).toBe(true);
+    expect(w.aim).toBeCloseTo(W.nukeMinRange);
+    advance(w, t, W.nukeAimTime / 2);
+    expect(w.aim).toBeGreaterThan(W.nukeMinRange + 20);
+    expect(w.aim).toBeLessThan(W.nukeRange - 20);
+    expect(w.aimAtMax).toBe(false);
+    advance(w, t, W.nukeAimTime / 2 + 0.05);
+    expect(w.aim).toBe(W.nukeRange);
+    expect(w.aimAtMax).toBe(true);
+    advance(w, t, 1);
+    expect(w.aim).toBe(W.nukeRange);
+  });
+
+  it('hide the crosshair outside a wheelie', () => {
+    const w = new Weapons();
+    w.step(DT, createTank(100, 300), idle, open);
+    expect(w.aiming).toBe(false);
+  });
+
+  it('land where the crosshair was: fire early for a short lob', () => {
+    const w = new Weapons();
+    const t = wheelie();
+    w.step(DT, t, idle, open);
     w.step(DT, t, press, open);
-    const mid = nukePosition({ ...w.nukes[0], t: W.nukeFlightTime / 2 });
+    const blasts = advance(w, t, W.nukeFlightTime + 0.05);
+    expect(blasts).toHaveLength(1);
+    expect(300 - blasts[0].y).toBeLessThan(W.nukeMinRange + 5);
+  });
+
+  it('lob to full range in a high arc once the crosshair is maxed out', () => {
+    const w = new Weapons();
+    const t = wheelie();
+    advance(w, t, W.nukeAimTime + 0.1);
+    w.step(DT, t, press, open);
+    const mid = nukePosition({ ...w.nukes[0], t: w.nukes[0].duration / 2 });
     expect(mid.height).toBeCloseTo(W.nukeApex);
+    expect(w.nukes[0].duration).toBeCloseTo(W.nukeFlightTime);
     const blasts = advance(w, t, W.nukeFlightTime + 0.05);
     expect(blasts).toEqual([{ kind: 'nuke', x: expect.closeTo(100), y: expect.closeTo(300 - W.nukeRange), radius: W.nukeBlastRadius }]);
+  });
+
+  it('snap the crosshair back in after firing', () => {
+    const w = new Weapons();
+    const t = wheelie();
+    advance(w, t, W.nukeAimTime + 0.1);
+    w.step(DT, t, press, open);
+    expect(w.aim).toBe(W.nukeMinRange);
   });
 
   it('fly over cliffs', () => {
@@ -149,7 +192,7 @@ describe('nukes', () => {
       w.step(DT, t, press, open, true);
       advance(w, t, 0.25, open, true);
     }
-    expect(w.nukes.length).toBe(3);
+    expect(w.events.filter((e) => e === 'nuke')).toHaveLength(3);
     expect(w.nukeCooldown).toBe(0);
   });
 });

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { bulletArt, cannonArt, craterArt, missileArt, torchikaArt, TYPE1_TANK, TYPE2_TANK, TYPE5_TANK } from '../art/enemySprites';
+import { crosshairArt } from '../art/crosshair';
 import { renderExplosion } from '../art/explosions';
 import { LIFE_ICON, NUKE_SHELL, PLAYER_TANK, PLAYER_TANK_BELLY, SHOT } from '../art/sprites';
 import { addAnimationStrip, addPixelArt, addPixelFont, addRgbaTexture } from '../art/textures';
@@ -33,6 +34,7 @@ export class BootScene extends Phaser.Scene {
     addRgbaTexture(this, 'pink', bulletArt('pink'));
     addRgbaTexture(this, 'missile', missileArt());
     addRgbaTexture(this, 'crater', craterArt());
+    addRgbaTexture(this, 'crosshair', crosshairArt());
     this.registry.set(SESSION_KEY, createSession());
     this.registry.set(SFX_KEY, new Sfx(window));
     this.scene.start('game');

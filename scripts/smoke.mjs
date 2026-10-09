@@ -89,7 +89,16 @@ try {
   const moved = Math.hypot(afterRoll.x - beforeRoll.x, afterRoll.y - beforeRoll.y);
   check(moved > 15 && afterRoll.heading === beforeRoll.heading, `roll moves sideways without turning (${moved.toFixed(1)} px)`);
 
-  await hold(['KeyA', 'KeyL'], 300);
+  // Wheelie: the crosshair slides out (white) and turns red at full range; then fire.
+  const aim = () => page.evaluate(() => ({ aiming: window.__assault.weapons.aiming, aim: window.__assault.weapons.aim, max: window.__assault.weapons.aimAtMax }));
+  await hold(['KeyA', 'KeyL'], 600);
+  const early = await aim();
+  check(early.aiming && !early.max && early.aim > 30, `a wheelie shows the crosshair sliding out (${early.aim.toFixed(0)} px, white)`);
+  await shot('04b-crosshair-white');
+  await page.waitForTimeout(900);
+  const full = await aim();
+  check(full.max, `the crosshair turns red at full range (${full.aim.toFixed(0)} px)`);
+  await shot('04c-crosshair-red');
   await page.keyboard.press('Space');
   await page.keyboard.press('Space');
   await page.waitForTimeout(100);

@@ -36,7 +36,11 @@ const enum Depth {
   EnemyShot = 6,
   Nuke = 7,
   Explosion = 8,
+  Crosshair = 9,
 }
+
+/** Crosshair tint once the nuke aim reaches maximum range. */
+const CROSSHAIR_MAX_TINT = 0xff3030;
 
 /** Emplacements keep their art upright; vehicles and turrets turn. */
 const FIXED_FACING: Partial<Record<EnemyKind, boolean>> = { torchika1: true, torchika2: true };
@@ -53,6 +57,7 @@ export class GameScene extends Phaser.Scene {
   private session!: Session;
   private tankSprite!: Phaser.GameObjects.Image;
   private tankShadow!: Phaser.GameObjects.Image;
+  private crosshair!: Phaser.GameObjects.Image;
   private shotSprites: Phaser.GameObjects.Image[] = [];
   private nukeSprites: { shell: Phaser.GameObjects.Image; shadow: Phaser.GameObjects.Image }[] = [];
   private projectileSprites: Phaser.GameObjects.Image[] = [];
@@ -84,6 +89,7 @@ export class GameScene extends Phaser.Scene {
     this.world = new World(terrain, spawns, { lives: this.session.lives, score: this.session.score, seed: Date.now() });
     this.tankShadow = this.add.image(0, 0, 'tank').setTintFill(0x000000).setAlpha(0.35).setDepth(Depth.Shadow);
     this.tankSprite = this.add.image(0, 0, 'tank').setDepth(Depth.Tank);
+    this.crosshair = this.add.image(0, 0, 'crosshair').setDepth(Depth.Crosshair).setVisible(false);
 
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x000000);
@@ -218,6 +224,16 @@ export class GameScene extends Phaser.Scene {
     this.tankSprite.setPosition(t.x + fwd.x * rear, t.y + fwd.y * rear);
     const lifted = 1 + hop / 3 + t.lift * 1.5;
     this.tankShadow.setPosition(t.x + SHADOW_X * lifted, t.y + SHADOW_Y * lifted);
+
+    // Nuke aim: the crosshair slides out from the tank, white, and turns red at full range.
+    const wpn = w.weapons;
+    this.crosshair.setVisible(w.state === 'playing' && wpn.aiming);
+    if (wpn.aiming) {
+      const c = wpn.crosshair(t);
+      this.crosshair.setPosition(c.x, c.y).setRotation(t.heading);
+      if (wpn.aimAtMax) this.crosshair.setTint(CROSSHAIR_MAX_TINT);
+      else this.crosshair.clearTint();
+    }
 
     this.syncEnemies();
     this.syncCraters();

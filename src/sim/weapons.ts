@@ -12,10 +12,16 @@ export const WEAPON_TUNING = {
   /** muzzle position: distance ahead of the tank centre, and each barrel's sideways offset */
   muzzleForward: 12,
   barrelOffset: 2.5,
-  /** nukes lob forward this far (px) over this long (s), then explode */
+  /**
+   * Nuke aiming: during a wheelie a crosshair starts this close (px) in front of
+   * the tank and slides out to the maximum range over `nukeAimTime` seconds,
+   * then stays there. Firing lobs the nuke to wherever the crosshair is.
+   */
+  nukeMinRange: 24,
   nukeRange: 120,
+  nukeAimTime: 1.2,
+  /** flight time (s) and peak height of the arc (px) for a full-range lob; shorter lobs are quicker and lower */
   nukeFlightTime: 0.9,
-  /** peak height of the arc, used for drawing (px) */
   nukeApex: 26,
   nukeBlastRadius: 30,
   /** after firing a nuke the tank must wait this long (s), except while raised by a jump zone */
@@ -38,6 +44,10 @@ export interface Nuke {
   toY: number;
   heading: number;
   t: number;
+  /** Seconds from launch to impact. */
+  duration: number;
+  /** Peak height of this lob (px). */
+  apex: number;
 }
 
 export type BlastKind = 'shot' | 'nuke';
@@ -67,11 +77,11 @@ export interface FireInput {
 
 /** Position of a nuke along its arc; height is 0 at launch and landing. */
 export function nukePosition(n: Nuke): { x: number; y: number; height: number; progress: number } {
-  const p = Math.min(1, n.t / WEAPON_TUNING.nukeFlightTime);
+  const p = Math.min(1, n.t / n.duration);
   return {
     x: n.fromX + (n.toX - n.fromX) * p,
     y: n.fromY + (n.toY - n.fromY) * p,
-    height: Math.sin(p * Math.PI) * WEAPON_TUNING.nukeApex,
+    height: Math.sin(p * Math.PI) * n.apex,
     progress: p,
   };
 }
@@ -83,6 +93,10 @@ export class Weapons {
   readonly events: FireEvent[] = [];
   /** Seconds until another nuke can be fired. */
   nukeCooldown = 0;
+  /** True while a nuke is ready to aim (full wheelie, or raised by a jump zone). */
+  aiming = false;
+  /** Crosshair distance ahead of the tank centre (px). */
+  aim = WEAPON_TUNING.nukeMinRange;
   private barrel: -1 | 1 = 1;
   private autoTimer = 0;
   /** Presses not yet acted on; one is handled per tick so quick taps aren't lost. */
@@ -98,10 +112,17 @@ export class Weapons {
     this.pendingPresses = Math.min(W.maxShots, this.pendingPresses + fire.presses);
     const pressed = this.pendingPresses > 0;
     if (pressed) this.pendingPresses--;
+    const nukeReady = raised || (tank.mode === 'wheelie' && tank.lift >= 1);
+    if (nukeReady && this.aiming) {
+      this.aim = Math.min(W.nukeRange, this.aim + ((W.nukeRange - W.nukeMinRange) / W.nukeAimTime) * dt);
+    } else {
+      this.aim = W.nukeMinRange;
+    }
+    this.aiming = nukeReady;
+
     const triggered = pressed || (fire.held && this.autoTimer === 0);
     if (triggered) {
       this.autoTimer = W.autoFireInterval;
-      const nukeReady = raised || (tank.mode === 'wheelie' && tank.lift >= 1);
       if (nukeReady) {
         if (raised || this.nukeCooldown === 0) this.launchNuke(tank, raised);
         else if (pressed) this.events.push('denied');
@@ -126,12 +147,23 @@ export class Weapons {
     for (let i = this.nukes.length - 1; i >= 0; i--) {
       const n = this.nukes[i];
       n.t += dt;
-      if (n.t >= W.nukeFlightTime) {
+      if (n.t >= n.duration) {
         blasts.push({ kind: 'nuke', x: n.toX, y: n.toY, radius: W.nukeBlastRadius });
         this.nukes.splice(i, 1);
       }
     }
     return blasts;
+  }
+
+  /** The crosshair has reached maximum range (drawn red rather than white). */
+  get aimAtMax(): boolean {
+    return this.aim >= WEAPON_TUNING.nukeRange;
+  }
+
+  /** Where the crosshair sits on the ground. */
+  crosshair(t: Tank): { x: number; y: number } {
+    const f = forwardVector(t.heading);
+    return { x: t.x + f.x * this.aim, y: t.y + f.y * this.aim };
   }
 
   /** Remove a shot that hit something (enemy collision is handled by the caller). */
@@ -160,14 +192,20 @@ export class Weapons {
   private launchNuke(t: Tank, raised: boolean): void {
     const W = WEAPON_TUNING;
     const f = forwardVector(t.heading);
+    const reach = this.aim / W.nukeRange;
+    const target = this.crosshair(t);
     this.nukes.push({
       fromX: t.x + f.x * 6,
       fromY: t.y + f.y * 6,
-      toX: t.x + f.x * W.nukeRange,
-      toY: t.y + f.y * W.nukeRange,
+      toX: target.x,
+      toY: target.y,
       heading: t.heading,
       t: 0,
+      duration: W.nukeFlightTime * (0.45 + 0.55 * reach),
+      apex: W.nukeApex * (0.4 + 0.6 * reach),
     });
+    // The crosshair snaps back in and starts extending again.
+    this.aim = W.nukeMinRange;
     if (!raised) this.nukeCooldown = W.nukeCooldown;
     this.events.push('nuke');
   }

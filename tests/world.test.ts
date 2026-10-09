@@ -158,11 +158,13 @@ describe('damaging enemies', () => {
     const range = WEAPON_TUNING.nukeRange / TILE;
     const w = new World(
       field(),
-      [ahead('type1', range), { kind: 'type1', tx: 51, ty: 50 - range }, { kind: 'type5', tx: 50, ty: 50 - range - 40 }],
+      // Pillboxes stay put while the crosshair slides out.
+      [ahead('torchika1', range), { kind: 'torchika2', tx: 51, ty: 50 - range }, { kind: 'type5', tx: 50, ty: 50 - range - 40 }],
       { lives: 3 },
     );
     w.invulnerable = 1e9;
-    for (let i = 0; i < 30; i++) stepTank(w.tank, 'wheelie', DT, field());
+    // Rear up and let the crosshair slide out to full range before firing.
+    run(w, 0.3 + WEAPON_TUNING.nukeAimTime, 'wheelie');
     w.step(DT, 'wheelie', FIRE);
     const events = run(w, WEAPON_TUNING.nukeFlightTime + 0.1, 'wheelie');
     expect(events.filter((e) => e.type === 'enemyKilled')).toHaveLength(2);

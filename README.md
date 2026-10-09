@@ -38,9 +38,10 @@ The original cabinet had two 4-way levers, one per hand. Here the left lever is
 | ← | → | A + L | Wheelie (stops and rears up; fire launches a nuke) |
 
 **Space** fires: tap or hold. At most three shots can be on screen, and they
-burst against cliffs. You can fire while rolling. During a wheelie, fire lobs a
-nuke over obstacles that explodes about 120 px ahead; it then needs 2.5 s to
-recharge. **M** mutes the sound. In dev builds, **`** (backquote) toggles a
+burst against cliffs. You can fire while rolling. During a wheelie a crosshair
+slides out from the tank, white while extending and red at full range (120 px).
+Fire lobs a nuke over obstacles to wherever the crosshair is, so fire early for
+a short lob. The nuke then needs 2.5 s to recharge. **M** mutes the sound. In dev builds, **`** (backquote) toggles a
 readout of the levers, the current move and the nuke recharge. Add `?peaceful`
 to the URL to drive around with no enemies.
 

@@ -17,11 +17,15 @@ import {
 import { crosshairArt, shockwaveArt } from '../art/crosshair';
 import { guideArrowArt, hatchArt, jumpZoneArt } from '../art/stageArt';
 import { renderExplosion } from '../art/explosions';
-import { LIFE_ICON, NUKE_SHELL, PLAYER_TANK, PLAYER_TANK_BELLY, SHOT } from '../art/sprites';
+import { ART_SCALE } from '../art/painter';
+import { nukeShellArt, playerTankArt, shotArt } from '../art/playerArt';
+import { LIFE_ICON } from '../art/sprites';
 import { addAnimationStrip, addPixelArt, addPixelFont, addRgbaTexture } from '../art/textures';
 import { Sfx } from '../audio/sfx';
 import { createSession, SESSION_KEY, SFX_KEY } from '../session';
 import { STAGES } from '../stages/stages';
+import { TEST_MAP } from '../stages/testMap';
+import { requestTerrain } from '../art/terrainCache';
 
 /** Builds every procedural texture, then starts play. */
 export class BootScene extends Phaser.Scene {
@@ -31,14 +35,16 @@ export class BootScene extends Phaser.Scene {
 
   create(): void {
     addPixelFont(this);
-    addPixelArt(this, 'tank', PLAYER_TANK);
-    addPixelArt(this, 'tankBelly', PLAYER_TANK_BELLY);
+    // World art is drawn at ART_SCALE; HUD art (the life icon) at the original resolution.
+    addRgbaTexture(this, 'tank', playerTankArt());
+    addRgbaTexture(this, 'tankBelly', playerTankArt(true));
     addPixelArt(this, 'lifeIcon', LIFE_ICON);
-    addPixelArt(this, 'shot', SHOT);
-    addPixelArt(this, 'nukeShell', NUKE_SHELL);
-    addAnimationStrip(this, 'sparkAnim', renderExplosion(12, 5, 3), 30);
-    addAnimationStrip(this, 'blastAnim', renderExplosion(56, 10, 5), 16);
-    addAnimationStrip(this, 'boomAnim', renderExplosion(32, 8, 7), 20);
+    addRgbaTexture(this, 'shot', shotArt());
+    addRgbaTexture(this, 'nukeShell', nukeShellArt());
+    const K = ART_SCALE;
+    addAnimationStrip(this, 'sparkAnim', renderExplosion(12 * K, 5, 3), 30);
+    addAnimationStrip(this, 'blastAnim', renderExplosion(56 * K, 10, 5), 16);
+    addAnimationStrip(this, 'boomAnim', renderExplosion(32 * K, 8, 7), 20);
     // Enemy textures are keyed by EnemyKind / ProjectileKind.
     addRgbaTexture(this, 'type1', TYPE1_TANK());
     addRgbaTexture(this, 'type2', TYPE2_TANK());
@@ -68,6 +74,11 @@ export class BootScene extends Phaser.Scene {
     const params = new URLSearchParams(window.location.search);
     const stage = Number(params.get('stage'));
     if (stage >= 1 && stage <= STAGES.length) session.stageIndex = stage - 1;
+
+    // Start painting the first stage's terrain while the title screen shows.
+    const first = params.get('map') === 'test' ? null : STAGES[session.stageIndex];
+    if (first) void requestTerrain(`terrain-${first.number}`, first.map, first.seed);
+    else void requestTerrain('terrain-0', TEST_MAP, 1);
     if (params.has('play') || params.get('map') === 'test') {
       this.scene.start('game');
       this.scene.launch('hud');

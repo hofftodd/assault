@@ -122,12 +122,25 @@ export class TileTerrain implements Terrain {
 
   /** Material at a world position, with noisy boundaries between natural tiles. */
   materialAt(x: number, y: number): Material {
+    return this.materialJittered(x, y, this.jitterX(x, y), this.jitterY(x, y));
+  }
+
+  /** How far tile boundaries are pushed around at (x, y), horizontally and vertically. */
+  jitterX(x: number, y: number): number {
+    const s = this.seed;
+    return (fbm(x / 30, y / 30, s + 1, 2) - 0.5) * 2 * JITTER + (valueNoise(x / 5, y / 5, s + 7) - 0.5) * 3;
+  }
+
+  jitterY(x: number, y: number): number {
+    const s = this.seed;
+    return (fbm(x / 30, y / 30, s + 2, 2) - 0.5) * 2 * JITTER + (valueNoise(x / 5, y / 5, s + 8) - 0.5) * 3;
+  }
+
+  /** Material at (x, y) given its boundary jitter (lets the renderer interpolate the jitter). */
+  materialJittered(x: number, y: number, jx: number, jy: number): Material {
     const ts = this.tileSize;
     // Paved areas keep crisp, straight edges.
     if (this.tileAt(Math.floor(x / ts), Math.floor(y / ts)) === Material.Concrete) return Material.Concrete;
-    const s = this.seed;
-    const jx = (fbm(x / 30, y / 30, s + 1, 2) - 0.5) * 2 * JITTER + (valueNoise(x / 5, y / 5, s + 7) - 0.5) * 3;
-    const jy = (fbm(x / 30, y / 30, s + 2, 2) - 0.5) * 2 * JITTER + (valueNoise(x / 5, y / 5, s + 8) - 0.5) * 3;
     const m = this.tileAt(Math.floor((x + jx) / ts), Math.floor((y + jy) / ts));
     return m === Material.Concrete ? Material.Ground : m;
   }

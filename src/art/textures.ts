@@ -52,3 +52,20 @@ export function addPixelFont(scene: Phaser.Scene): void {
     }),
   );
 }
+
+/** Upload a large image as square tiles (some GPUs refuse textures over 4096 px). */
+export function addTiledTexture(scene: Phaser.Scene, key: string, img: Rgba, tile = 1024): { key: string; x: number; y: number }[] {
+  const tiles: { key: string; x: number; y: number }[] = [];
+  for (let ty = 0; ty < img.height; ty += tile) {
+    for (let tx = 0; tx < img.width; tx += tile) {
+      const w = Math.min(tile, img.width - tx);
+      const h = Math.min(tile, img.height - ty);
+      const data = new Uint8ClampedArray(w * h * 4);
+      for (let y = 0; y < h; y++) data.set(img.data.subarray(((ty + y) * img.width + tx) * 4, ((ty + y) * img.width + tx + w) * 4), y * w * 4);
+      const k = `${key}-${tx}-${ty}`;
+      if (!scene.textures.exists(k)) addRgbaTexture(scene, k, { width: w, height: h, data });
+      tiles.push({ key: k, x: tx, y: ty });
+    }
+  }
+  return tiles;
+}

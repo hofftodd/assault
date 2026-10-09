@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
-import { renderTerrain } from '../art/terrainRender';
-import { addRgbaTexture } from '../art/textures';
+import { SHOCKWAVE_RADIUS } from '../art/crosshair';
+import { ART_SCALE } from '../art/painter';
+import { releaseTerrain, requestTerrain } from '../art/terrainCache';
+import { addTiledTexture } from '../art/textures';
 import type { Sfx } from '../audio/sfx';
 import { DEFAULT_BINDINGS } from '../input/bindings';
 import { KeyboardLevers } from '../input/keyboardLevers';
@@ -17,7 +19,7 @@ import { TEST_MAP, TEST_SPAWNS } from '../stages/testMap';
 /** Simulation tick, decoupled from the display refresh rate. */
 const STEP = 1 / 60;
 
-/** Where the player's tank sits on screen; the world rotates around this point. */
+/** Where the player's tank sits on the 224x288 screen; the world rotates around this point. */
 export const TANK_SCREEN_X = 112;
 export const TANK_SCREEN_Y = 225;
 
@@ -36,6 +38,13 @@ const RAISED_ZOOM = 0.55;
 const TEST_STAGE: StageDef = { number: 0, area: 'TEST', timeLimit: Infinity, hard: false, seed: 1, map: [...TEST_MAP], guide: [] };
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** World sprites are drawn ART_SCALE times finer than world pixels; show them at this scale. */
+const S = 1 / ART_SCALE;
+
+type TerrainTiles = ReturnType<typeof addTiledTexture>;
+/** Terrain textures already on the GPU, by stage key; they persist across scene restarts. */
+const TERRAIN_TILES = new Map<string, TerrainTiles>();
 
 const enum Depth {
   Terrain = 0,
@@ -78,6 +87,7 @@ export class GameScene extends Phaser.Scene {
   private zoneViews = new Map<JumpZone, Phaser.GameObjects.Image>();
   private stage!: StageDef;
   private testMap = false;
+  private terrainReady = false;
   /** Seconds since the last stage finished, while showing the end-of-content message. */
   private endingTime = -1;
   private leaving = false;
@@ -109,10 +119,28 @@ export class GameScene extends Phaser.Scene {
     if (!this.testMap) this.session.stageReached = pad2(st.number);
 
     const terrain = new TileTerrain(st.map, 16, st.seed);
+    // The terrain paints in a background worker (usually already done, requested ahead
+    // of time); play holds on the READY screen until it arrives.
+    this.terrainReady = false;
     const key = `terrain-${st.number}`;
-    if (!this.textures.exists(key)) addRgbaTexture(this, key, renderTerrain(terrain));
-    this.add.image(0, 0, key).setOrigin(0, 0).setDepth(Depth.Terrain);
-    if (terrain.hatch) this.add.image(terrain.hatch.x, terrain.hatch.y, 'hatch').setDepth(Depth.Pad);
+    const placeTiles = (tiles: TerrainTiles) => {
+      for (const tile of tiles) this.add.image(tile.x * S, tile.y * S, tile.key).setOrigin(0, 0).setDepth(Depth.Terrain).setScale(S);
+      this.terrainReady = true;
+    };
+    const uploaded = TERRAIN_TILES.get(key);
+    if (uploaded) placeTiles(uploaded);
+    else
+      void requestTerrain(key, st.map, st.seed).then((img) => {
+        if (!this.sys.isActive() || this.terrainReady) return;
+        const tiles = addTiledTexture(this, key, img);
+        TERRAIN_TILES.set(key, tiles);
+        releaseTerrain(key);
+        placeTiles(tiles);
+      });
+    // Start painting the next stage while this one is played.
+    const next = STAGES[this.session.stageIndex + 1];
+    if (next && !this.testMap && !TERRAIN_TILES.has(`terrain-${next.number}`)) void requestTerrain(`terrain-${next.number}`, next.map, next.seed);
+    if (terrain.hatch) this.add.image(terrain.hatch.x, terrain.hatch.y, 'hatch').setDepth(Depth.Pad).setScale(S);
 
     const spawns = params.has('peaceful') ? [] : this.testMap ? TEST_SPAWNS : [...terrain.spawns, ...(st.spawns ?? [])];
     const tile = (p: [number, number]) => ({ x: (p[0] + 0.5) * 16, y: (p[1] + 0.5) * 16 });
@@ -125,15 +153,15 @@ export class GameScene extends Phaser.Scene {
       guide: st.guide.map(tile),
       startHeading: ((st.startHeading ?? 0) * Math.PI) / 180,
     });
-    for (const z of this.world.jumpZones) this.zoneViews.set(z, this.add.image(z.x, z.y, 'jumpZone').setDepth(Depth.Pad));
+    for (const z of this.world.jumpZones) this.zoneViews.set(z, this.add.image(z.x, z.y, 'jumpZone').setDepth(Depth.Pad).setScale(S));
     this.tankShadow = this.add.image(0, 0, 'tank').setTintFill(0x000000).setAlpha(0.35).setDepth(Depth.Shadow);
     this.tankSprite = this.add.image(0, 0, 'tank').setDepth(Depth.Tank);
     this.crosshair = this.add.image(0, 0, 'crosshair').setDepth(Depth.Crosshair).setVisible(false);
 
     const cam = this.cameras.main;
     cam.setBackgroundColor(0x000000);
-    cam.setOrigin(TANK_SCREEN_X / cam.width, TANK_SCREEN_Y / cam.height);
-    cam.setZoom(1);
+    cam.setOrigin((TANK_SCREEN_X * ART_SCALE) / cam.width, (TANK_SCREEN_Y * ART_SCALE) / cam.height);
+    cam.setZoom(ART_SCALE);
     cam.fadeIn(400);
 
     this.levers = new KeyboardLevers(window, DEFAULT_BINDINGS);
@@ -158,6 +186,10 @@ export class GameScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     if (this.leaving) return;
+    if (!this.terrainReady) {
+      this.session.message = 'PLAYER\n\n1\n\nREADY';
+      return;
+    }
     let presses = this.levers.consumeFirePresses();
     this.levers.consumeStartPresses();
     this.acc += Math.min(delta, 250) / 1000;
@@ -299,8 +331,8 @@ export class GameScene extends Phaser.Scene {
         break;
       case 'enemyEmerging':
         this.tweens.add({
-          targets: this.add.image(e.enemy.x, e.enemy.y, 'hole').setDepth(Depth.Crater).setScale(0.2),
-          scale: 1,
+          targets: this.add.image(e.enemy.x, e.enemy.y, 'hole').setDepth(Depth.Crater).setScale(0.2 * S),
+          scale: S,
           duration: 500,
           ease: 'Back.easeOut',
         });
@@ -345,7 +377,7 @@ export class GameScene extends Phaser.Scene {
 
   private zoomTo(zoom: number): void {
     this.tweens.killTweensOf(this.cameras.main);
-    this.tweens.add({ targets: this.cameras.main, zoom, duration: 600, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: this.cameras.main, zoom: zoom * ART_SCALE, duration: 600, ease: 'Sine.easeInOut' });
   }
 
   /** The hatch iris opens beneath the tank, which sinks through, then the screen fades out. */
@@ -354,7 +386,7 @@ export class GameScene extends Phaser.Scene {
     if (!h) return;
     const hole = this.add.circle(h.x, h.y, 1, 0x000000).setDepth(Depth.Pad + 0.1);
     this.tweens.add({ targets: hole, radius: 13, duration: 700, ease: 'Cubic.easeOut' });
-    this.tweens.add({ targets: [this.tankSprite], scale: 0.3, delay: 700, duration: 900, ease: 'Cubic.easeIn' });
+    this.tweens.add({ targets: [this.tankSprite], scale: 0.3 * S, delay: 700, duration: 900, ease: 'Cubic.easeIn' });
     this.cameras.main.fadeOut(600, 0, 0, 0);
     this.time.delayedCall(1700, () => this.cameras.main.fadeIn(1));
   }
@@ -363,12 +395,12 @@ export class GameScene extends Phaser.Scene {
   private shockwave(x: number, y: number, radius: number): void {
     const t = this.world.tank;
     const dim = this.add.rectangle(t.x, t.y, 800, 800, 0x000000, 0.5).setDepth(Depth.Explosion - 0.5);
-    const full = radius / 32;
+    const full = (radius / SHOCKWAVE_RADIUS) * S;
     // A quick white flash at ground zero, then the ring (and a fainter echo) sweeps out.
     const flash = this.add.circle(x, y, radius * 0.5, 0xffffff, 0.85).setDepth(Depth.Explosion);
     this.tweens.add({ targets: flash, alpha: 0, scale: 0.3, duration: 220, onComplete: () => flash.destroy() });
     for (const [delay, alpha] of [[0, 1], [110, 0.5]] as const) {
-      const ring = this.add.image(x, y, 'shockwave').setDepth(Depth.Explosion + 0.5).setScale(0.1).setAlpha(alpha);
+      const ring = this.add.image(x, y, 'shockwave').setDepth(Depth.Explosion + 0.5).setScale(0.1 * S).setAlpha(alpha);
       this.tweens.add({ targets: ring, scale: full, delay, duration: 420, ease: 'Cubic.easeOut' });
       this.tweens.add({ targets: ring, alpha: 0, delay: delay + 420, duration: 300, onComplete: () => ring.destroy() });
     }
@@ -376,7 +408,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private explosion(x: number, y: number, anim: string): void {
-    const s = this.add.sprite(x, y, anim).setDepth(Depth.Explosion).setRotation(this.world.tank.heading);
+    const s = this.add.sprite(x, y, anim).setDepth(Depth.Explosion).setRotation(this.world.tank.heading).setScale(S);
     s.play(anim).once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => s.destroy());
   }
 
@@ -402,7 +434,7 @@ export class GameScene extends Phaser.Scene {
     if (w.state !== 'done') {
       for (const img of [this.tankSprite, this.tankShadow]) {
         img.setRotation(t.heading).setVisible(visible);
-        if (w.state !== 'exiting') img.setScale(Math.max(0.12, Math.abs(flip)) * (1 + height * 0.25), (1 - 0.22 * t.lift) * (1 + height * 0.25));
+        if (w.state !== 'exiting') img.setScale(S * Math.max(0.12, Math.abs(flip)) * (1 + height * 0.25), S * (1 - 0.22 * t.lift) * (1 + height * 0.25));
       }
     } else {
       this.tankSprite.setVisible(false);
@@ -447,8 +479,8 @@ export class GameScene extends Phaser.Scene {
       // Rising out of its hole: grows from nothing, its shadow drawing away as it lifts.
       const rise = e.state === 'emerging' ? Math.min(1, e.emergeTime / WORLD_TUNING.emergeTime) : 1;
       const lift = e.kind === 'ufo' ? 1.8 : 1;
-      v.body.setPosition(e.x, e.y).setRotation(rot).setScale(rise);
-      v.shadow.setPosition(e.x + SHADOW_X * lift * rise, e.y + SHADOW_Y * lift * rise).setRotation(rot).setScale(rise);
+      v.body.setPosition(e.x, e.y).setRotation(rot).setScale(rise * S);
+      v.shadow.setPosition(e.x + SHADOW_X * lift * rise, e.y + SHADOW_Y * lift * rise).setRotation(rot).setScale(rise * S);
       if (e.flash > 0) v.body.setTintFill(0xffffff);
       else v.body.clearTint();
     }
@@ -472,7 +504,7 @@ export class GameScene extends Phaser.Scene {
   private syncCraters(): void {
     const live = new Set(this.world.craters);
     for (const c of live) {
-      if (!this.craterViews.has(c)) this.craterViews.set(c, this.add.image(c.x, c.y, 'crater').setDepth(Depth.Crater));
+      if (!this.craterViews.has(c)) this.craterViews.set(c, this.add.image(c.x, c.y, 'crater').setDepth(Depth.Crater).setScale(S));
     }
     for (const [c, img] of this.craterViews) {
       if (live.has(c)) continue;
@@ -483,7 +515,7 @@ export class GameScene extends Phaser.Scene {
 
   private syncShots(): void {
     const shots = this.world.weapons.shots;
-    while (this.shotSprites.length < shots.length) this.shotSprites.push(this.add.image(0, 0, 'shot').setDepth(Depth.Shot));
+    while (this.shotSprites.length < shots.length) this.shotSprites.push(this.add.image(0, 0, 'shot').setDepth(Depth.Shot).setScale(S));
     this.shotSprites.forEach((img, i) => {
       const s = shots[i];
       img.setVisible(!!s);
@@ -493,7 +525,7 @@ export class GameScene extends Phaser.Scene {
 
   private syncProjectiles(): void {
     const ps = this.world.projectiles;
-    while (this.projectileSprites.length < ps.length) this.projectileSprites.push(this.add.image(0, 0, 'orange').setDepth(Depth.EnemyShot));
+    while (this.projectileSprites.length < ps.length) this.projectileSprites.push(this.add.image(0, 0, 'orange').setDepth(Depth.EnemyShot).setScale(S));
     this.projectileSprites.forEach((img, i) => {
       const p = ps[i];
       img.setVisible(!!p);
@@ -517,8 +549,8 @@ export class GameScene extends Phaser.Scene {
       // Seen from above, height shows as size; the shadow drifts away from the shell as it climbs.
       const p = nukePosition(n);
       const h = p.height / WEAPON_TUNING.nukeApex;
-      shell.setPosition(p.x, p.y).setRotation(n.heading).setScale(1 + h * 0.9);
-      shadow.setPosition(p.x + SHADOW_X * (1 + h * 4), p.y + SHADOW_Y * (1 + h * 4)).setRotation(n.heading).setScale(1 - h * 0.3);
+      shell.setPosition(p.x, p.y).setRotation(n.heading).setScale(S * (1 + h * 0.9));
+      shadow.setPosition(p.x + SHADOW_X * (1 + h * 4), p.y + SHADOW_Y * (1 + h * 4)).setRotation(n.heading).setScale(S * (1 - h * 0.3));
     });
   }
 

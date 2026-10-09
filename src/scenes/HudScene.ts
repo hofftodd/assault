@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ART_SCALE } from '../art/painter';
 import { HUD_PINK, HUD_SHADOW_BLUE, HUD_WHITE } from '../art/palette';
 import { FONT_KEY } from '../art/textures';
 import { SESSION_KEY, type Session } from '../session';
@@ -23,6 +24,8 @@ export class HudScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Laid out on the original 224x288 grid, shown at the canvas's finer resolution.
+    this.cameras.main.setZoom(ART_SCALE).centerOn(112, 144);
     this.session = this.registry.get(SESSION_KEY);
     this.lifeIcons = [];
     const label = (x: number, text: string) =>

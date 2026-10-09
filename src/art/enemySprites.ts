@@ -1,7 +1,7 @@
 import { hash2 } from '../sim/noise';
 import { Painter, shade } from './painter';
 import type { RGB } from './palette';
-import { rasterize, type PixelArt, type Rgba } from './pixelSprite';
+import type { Rgba } from './pixelSprite';
 
 // Ramps (dark to light), sampled from the original's sprites.
 const RUST: RGB[] = [[89, 50, 40], [125, 76, 56], [143, 93, 64], [162, 110, 73], [180, 127, 82], [198, 144, 90], [217, 163, 99]];
@@ -122,28 +122,21 @@ export function bulletArt(kind: 'orange' | 'pink'): Rgba {
   return p.toRgba();
 }
 
-export const MISSILE: PixelArt = {
-  palette: { k: 0x18181f, W: 0xe8e8e8, g: 0x9a9aa8, G: 0x5a5a66, r: 0xe02020, y: 0xffe060, o: 0xff9020 },
-  rows: ['.r.', 'rWr', 'WgW', 'WgW', 'kGk', '.y.', '.o.'],
-};
-
-export const missileArt = (): Rgba => rasterize(MISSILE);
+export { missileArt } from './playerArt';
 
 /** Scorched crater left by a destroyed tank (semi-transparent, drawn on the ground). */
 export function craterArt(): Rgba {
   const size = 20;
   const p = new Painter(size, size);
-  const c = (size - 1) / 2;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const d = Math.hypot(x - c, y - c) / 8.5 + (hash2(x, y, 41) - 0.5) * 0.25;
-      if (d > 1) continue;
-      const rim = d > 0.72;
-      // The raised rim catches the light from the lower right; the hollow sits in shade.
-      const lit = rim ? 0.6 + ((x - c) + (y - c)) / 40 : 0.15 + d * 0.3;
-      p.px(x, y, shade([[34, 28, 8], [50, 42, 12], [66, 56, 16], [110, 96, 40], [140, 124, 60]], lit), rim ? 230 : 200);
-    }
-  }
+  const c = size / 2;
+  p.each(0, 0, size, size, (x, y, X, Y) => {
+    const d = Math.hypot(x - c, y - c) / 8.5 + (hash2(X, Y, 41) - 0.5) * 0.25;
+    if (d > 1) return;
+    const rim = d > 0.72;
+    // The raised rim catches the light from the lower right; the hollow sits in shade.
+    const lit = rim ? 0.6 + ((x - c) + (y - c)) / 40 : 0.15 + d * 0.3;
+    p.dot(X, Y, shade([[34, 28, 8], [50, 42, 12], [66, 56, 16], [110, 96, 40], [140, 124, 60]], lit), rim ? 230 : 200);
+  });
   return p.toRgba();
 }
 
@@ -176,28 +169,25 @@ export function ufoArt(): Rgba {
 /** Thin laser bolt, flying up. */
 export function laserArt(): Rgba {
   const p = new Painter(3, 12);
-  for (let y = 0; y < 12; y++) {
-    p.px(1, y, y < 2 ? [255, 255, 255] : [140, 255, 255]);
-    if (y > 1 && y < 10) {
-      p.px(0, y, [40, 160, 220], 180);
-      p.px(2, y, [40, 160, 220], 180);
-    }
-  }
+  p.each(0, 0, 3, 12, (x, y, X, Y) => {
+    const core = Math.abs(x - 1.5);
+    const fade = y > 9 ? (12 - y) / 3 : 1;
+    if (core < 0.45) p.dot(X, Y, y < 2 ? [255, 255, 255] : [150, 255, 255], Math.round(255 * fade));
+    else if (y > 1 && core < 1.4) p.dot(X, Y, [40, 160, 220], Math.round(170 * fade * (1.4 - core)));
+  });
   return p.toRgba();
 }
 
 /** The pit a UFO launcher rises out of: sandy rim, black depths. */
 export function holeArt(): Rgba {
   const size = 26;
-  const c = (size - 1) / 2;
+  const c = size / 2;
   const p = new Painter(size, size);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const d = Math.hypot(x - c, y - c) / 12 + (hash2(x, y, 51) - 0.5) * 0.12;
-      if (d > 1) continue;
-      if (d > 0.72) p.px(x, y, shade([[70, 60, 12], [110, 96, 40], [150, 136, 80]], 0.4 + ((x - c) + (y - c)) / 30));
-      else p.px(x, y, d > 0.55 ? [20, 16, 6] : [4, 4, 4]);
-    }
-  }
+  p.each(0, 0, size, size, (x, y, X, Y) => {
+    const d = Math.hypot(x - c, y - c) / 12 + (hash2(X, Y, 51) - 0.5) * 0.12;
+    if (d > 1) return;
+    if (d > 0.72) p.dot(X, Y, shade([[70, 60, 12], [110, 96, 40], [150, 136, 80]], 0.4 + ((x - c) + (y - c)) / 30));
+    else p.dot(X, Y, d > 0.55 ? [20, 16, 6] : [4, 4, 4]);
+  });
   return p.toRgba();
 }

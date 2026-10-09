@@ -46,7 +46,6 @@ export function jumpZoneArt(spent: boolean): Rgba {
 /** Exit hatch: a steel frame with blue corner brackets around a closed iris. */
 export function hatchArt(): Rgba {
   const size = 44;
-  const c = (size - 1) / 2;
   const p = new Painter(size, size);
   p.slab(1, 1, size - 2, size - 2, STEEL);
   const blue: RGB = [60, 110, 230];
@@ -61,18 +60,17 @@ export function hatchArt(): Rgba {
     }
   }
   // Iris: shaded disc split into blades.
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const d = Math.hypot(x - c, y - c);
-      if (d > 14) continue;
-      if (d > 12.5) {
-        p.px(x, y, STEEL[0]);
-        continue;
-      }
-      const blade = Math.floor(((Math.atan2(y - c, x - c) + Math.PI) / (2 * Math.PI)) * 8 + d / 6) % 2;
-      p.px(x, y, shade(STEEL, 0.25 + blade * 0.3 + (x - c + y - c) / 60));
+  const o = size / 2;
+  p.each(0, 0, size, size, (x, y, X, Y) => {
+    const d = Math.hypot(x - o, y - o);
+    if (d > 14) return;
+    if (d > 12.5) {
+      p.dot(X, Y, STEEL[0]);
+      return;
     }
-  }
+    const blade = Math.floor(((Math.atan2(y - o, x - o) + Math.PI) / (2 * Math.PI)) * 8 + d / 6) % 2;
+    p.dot(X, Y, shade(STEEL, 0.25 + blade * 0.3 + (x - o + y - o) / 60));
+  });
   return p.toRgba();
 }
 
@@ -80,7 +78,8 @@ export function hatchArt(): Rgba {
 export function guideArrowArt(): Rgba {
   const size = 17;
   const c = (size - 1) / 2;
-  const p = new Painter(size, size);
+  // Drawn on the HUD, which stays at the original resolution.
+  const p = new Painter(size, size, 1);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const d = Math.hypot(x - c, y - c);

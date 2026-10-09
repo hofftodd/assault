@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ART_SCALE } from '../art/painter';
 import { HUD_PINK, HUD_SHADOW_BLUE, HUD_WHITE } from '../art/palette';
 import { FONT_KEY } from '../art/textures';
 import type { Sfx } from '../audio/sfx';
@@ -27,6 +28,8 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Laid out on the original 224x288 grid, shown at the canvas's finer resolution.
+    this.cameras.main.setZoom(ART_SCALE).centerOn(112, 144);
     this.session = this.registry.get(SESSION_KEY);
     this.sfx = this.registry.get(SFX_KEY);
     this.starting = false;
@@ -46,8 +49,8 @@ export class TitleScene extends Phaser.Scene {
     const logoShadow = this.add.bitmapText(113, 59, FONT_KEY, 'ASSAULT').setOrigin(0.5).setScale(5).setTint(0x100820);
     const logo = this.add.bitmapText(112, 57, FONT_KEY, 'ASSAULT').setOrigin(0.5).setScale(5);
     logo.setTint(0xfff0d0, 0xfff0d0, 0xe03030, 0xe03030);
-    const tank = this.add.image(112, 128, 'tank').setScale(3);
-    const tankShadow = this.add.image(106, 120, 'tank').setScale(3).setTintFill(0x000000).setAlpha(0.35);
+    const tank = this.add.image(112, 128, 'tank').setScale(3 / ART_SCALE);
+    const tankShadow = this.add.image(106, 120, 'tank').setScale(3 / ART_SCALE).setTintFill(0x000000).setAlpha(0.35);
     this.logoPage = this.add.container(0, 0, [
       logoShadow,
       logo,

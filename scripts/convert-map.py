@@ -1,10 +1,13 @@
 """Convert a StrategyWiki stage map image into tile-map rows (legend in src/sim/terrain.ts).
 
-    python3 scripts/convert-map.py reference/maps/stage02.png X0 Y0 X1 Y1 CELL > rows.txt
+    python3 scripts/convert-map.py reference/maps/stage02.png X0 Y0 X1 Y1 CELL [UPSCALE [SMOOTH [PALETTE]]] > rows.txt
 
 Each CELL x CELL block of the cropped image becomes one tile, classified by the
 majority colour: black = void, grey = cliff, olive = ground, speckled grey on
 olive = rough, teal = water, dark green = crops, blue-grey = concrete.
+UPSCALE enlarges the image first (for maps drawn at a smaller scale), and SMOOTH
+runs that many majority-filter passes over the land tiles to tidy speckle.
+PALETTE 'area3' reads the darker area 3 map ('h' marks hedges).
 Markers (jump zones, enemies, the hatch) are placed separately in stages.ts.
 """
 import sys
@@ -28,16 +31,44 @@ def pixel_class(r, g, b):
     return '#'
 
 
+def pixel_class_area3(r, g, b):
+    """Area 3 is drawn darker and greener: dim olive ground, near-black green patches."""
+    if max(r, g, b) < 25:
+        return ' '
+    if g - r > 35 and b > 35:
+        return '~'
+    if b - r > 12 and b > 80:
+        return '='
+    if r >= 90 and g >= 90 and b < 40 and abs(r - g) < 30:
+        return 'h'
+    if r > 105 and b < 75 and r - b > 40:
+        return '.'  # dirt paths between the paddies
+    if b >= 40 or (abs(r - g) < 14 and abs(g - b) < 20 and r > 50):
+        return '#'
+    if r < 48 and g < 64:
+        return 'f'
+    return '.'
+
+
+PALETTES = {'default': pixel_class, 'area3': pixel_class_area3}
+
+
 def main():
     path, x0, y0, x1, y1, cell = sys.argv[1], *map(int, sys.argv[2:7])
+    upscale = int(sys.argv[7]) if len(sys.argv) > 7 else 1
+    smooth = int(sys.argv[8]) if len(sys.argv) > 8 else 0
+    classify = PALETTES[sys.argv[9] if len(sys.argv) > 9 else 'default']
     im = Image.open(path).convert('RGB')
+    if upscale > 1:
+        im = im.resize((im.width * upscale, im.height * upscale), Image.NEAREST)
+        x0, y0, x1, y1 = x0 * upscale, y0 * upscale, x1 * upscale, y1 * upscale
     px = im.load()
     rows = []
     for ty in range((y1 - y0) // cell):
         row = []
         for tx in range((x1 - x0) // cell):
             counts = Counter(
-                pixel_class(*px[x0 + tx * cell + dx, y0 + ty * cell + dy]) for dy in range(cell) for dx in range(cell)
+                classify(*px[x0 + tx * cell + dx, y0 + ty * cell + dy]) for dy in range(cell) for dx in range(cell)
             )
             ch, n = counts.most_common(1)[0]
             total = cell * cell
@@ -48,7 +79,26 @@ def main():
                 ch = '.'
             row.append(ch)
         rows.append(row)
+    for _ in range(smooth):
+        rows = majority(rows)
     print('\n'.join(''.join(r) for r in cleanup(rows)))
+
+
+def majority(g):
+    """One pass of a 3x3 majority filter over land tiles (the void and water keep their shape)."""
+    h, w = len(g), len(g[0])
+    out = [row[:] for row in g]
+    for y in range(h):
+        for x in range(w):
+            if g[y][x] in ' ~':
+                continue
+            counts = Counter(
+                g[y + dy][x + dx] for dy in (-1, 0, 1) for dx in (-1, 0, 1) if 0 <= y + dy < h and 0 <= x + dx < w
+            )
+            ch, n = counts.most_common(1)[0]
+            if ch not in ' ~' and n >= 5:
+                out[y][x] = ch
+    return out
 
 
 def cleanup(g):

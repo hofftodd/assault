@@ -109,4 +109,17 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   launchers from holes in the ground, which fire lasers. Also adds Type 3 tanks,
   a parked tank worth 1000 points, and the 2:40 clock. The player tank is
   redrawn with the original's single central cannon.
-- **Next:** area 3, "Crops Grow in River Side" (stages 3-5).
+- **Milestone 6 (done):** area 3, "Crops Grow in River Side", stages 3-5. All
+  three play on crops of one map converted from StrategyWiki's area map, with
+  hand-built bases, cannon batteries and hedge rows. Stages 3 and 4 end at gates
+  that slide open, and the tank drives through into the next stage. Stage 5
+  (6:00) ends on a launch pad. New enemies:
+  - armoured Type 1s, the 101 Scouter, and Type 6, 7-A and 7-B heavy tanks (the
+    7-B fires in sixteen directions);
+  - Type 4s that surface from the rivers;
+  - hovering 501 Fourlegs that fly over cliffs and the void;
+  - the airborne Generator: shells pass beneath it, each nuke is one hit, and a
+    nuke down its centre hole destroys it outright;
+  - Type 2 and Type 3 cannons.
+- **Next:** area 4, "And Reconstruct Our Ruined Home" (stages 6-9 and 11), then
+  stage 10 on the area 3 map.

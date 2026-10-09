@@ -219,6 +219,14 @@ export function renderTerrain(t: TileTerrain, k = ART_SCALE): Rgba {
           put(X, Y, pick(CROP, leaf * 0.9 + row + (grain - 0.5) * 0.25));
           break;
         }
+        case Material.Hedge: {
+          // Clipped hedge: dense leaves, lit on the lower-right faces and dark on the upper-left.
+          const ts = t.tileSize;
+          const near = (dx: number, dy: number) => t.tileAt(Math.floor((x + dx) / ts), Math.floor((y + dy) / ts)) === Material.Hedge;
+          const edge = !near(-2, 0) || !near(0, -2) ? -0.3 : !near(2, 0) || !near(0, 2) ? 0.3 : 0;
+          put(X, Y, pick(MOSS, 0.45 + edge + (sample(leafF, x, y) - 0.5) * 0.8 + (grain - 0.5) * 0.25));
+          break;
+        }
         case Material.Concrete: {
           // Large paving slabs with dark seams and a lit lip; each slab slightly different.
           const sx = Math.floor(X / slab);

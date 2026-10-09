@@ -86,6 +86,16 @@ try {
   write('enemy_torchika1.png', enemy.torchikaArt(4), 8);
   write('enemy_torchika2.png', enemy.torchikaArt(8), 8);
   write('enemy_cannon1.png', enemy.cannonArt(), 4);
+  write('enemy_cannon2.png', enemy.cannon2Art(), 4);
+  write('enemy_cannon3.png', enemy.cannon3Art(), 4);
+  write('enemy_type1a.png', enemy.TYPE1A_TANK(), 8);
+  write('enemy_type4.png', enemy.TYPE4_TANK(), 8);
+  write('enemy_type6.png', enemy.TYPE6_TANK(), 4);
+  write('enemy_type7a.png', enemy.TYPE7A_TANK(), 4);
+  write('enemy_type7b.png', enemy.TYPE7B_TANK(), 4);
+  write('enemy_scouter.png', enemy.SCOUTER(), 8);
+  write('enemy_fourlegs.png', enemy.fourlegsArt(), 8);
+  write('enemy_generator.png', enemy.generatorArt(), 2);
   write('bullet_orange.png', enemy.bulletArt('orange'), 8);
   write('bullet_pink.png', enemy.bulletArt('pink'), 8);
   write('missile.png', enemy.missileArt(), 8);

@@ -12,6 +12,8 @@ export const Material = {
   Water: 5,
   /** Crop fields and thickets: drivable but slow. */
   Crop: 6,
+  /** Clipped hedges (area 3's maze): block tanks and shots, with crisp edges. */
+  Hedge: 7,
 } as const;
 export type Material = (typeof Material)[keyof typeof Material];
 
@@ -33,7 +35,8 @@ export interface Terrain {
  * Tile map legend (one character per tile):
  *   ' ' void   '#' rock   '.' ground   ',' rough ground   '=' concrete   '~' water   'f' crops
  *   'b' bush   'o' boulder   'P' player start   'J' jump zone   (all on ground)
- *   'H' exit hatch (on concrete)
+ *   'h' hedge   'H' exit hatch, or where the tank drives to after the gates open (on concrete)
+ *   'G' exit gate (concrete, closed until the stage is cleared)   'X' where the tank drives to through the gates (ground)
  *   Enemies on ground: '1' Type 1   '2' Type 2   '5' Type 5   'a' 4-way Torchika   'A' 8-way Torchika
  *   'C' Type 1 cannon (on concrete)
  * Waves that appear in sequence are listed in the stage definition instead.
@@ -51,6 +54,9 @@ const LEGEND: Record<string, Material> = {
   P: Material.Ground,
   J: Material.Ground,
   H: Material.Concrete,
+  G: Material.Concrete,
+  X: Material.Ground,
+  h: Material.Hedge,
   '1': Material.Ground,
   '2': Material.Ground,
   '5': Material.Ground,
@@ -85,6 +91,9 @@ export class TileTerrain implements Terrain {
   /** World-space centres of jump zones and the exit hatch. */
   readonly jumpZones: { x: number; y: number }[] = [];
   hatch: { x: number; y: number } | null = null;
+  /** World-space box of the exit gate tiles, and whether it has slid open. */
+  gate: { x0: number; y0: number; x1: number; y1: number } | null = null;
+  gateOpen = false;
   private readonly tiles: Uint8Array;
 
   constructor(
@@ -109,7 +118,11 @@ export class TileTerrain implements Terrain {
         if (ch === 'o') this.decor.push({ kind: 'boulder', x: cx, y: cy });
         if (ch === 'P') Object.assign(this.start, { x: cx, y: cy });
         if (ch === 'J') this.jumpZones.push({ x: cx, y: cy });
-        if (ch === 'H') this.hatch = { x: cx, y: cy };
+        if (ch === 'H' || ch === 'X') this.hatch = { x: cx, y: cy };
+        if (ch === 'G') {
+          const g = this.gate ?? { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+          this.gate = { x0: Math.min(g.x0, tx * tileSize), y0: Math.min(g.y0, ty * tileSize), x1: Math.max(g.x1, (tx + 1) * tileSize), y1: Math.max(g.y1, (ty + 1) * tileSize) };
+        }
         if (ENEMY_CHARS[ch]) this.spawns.push({ kind: ENEMY_CHARS[ch], tx, ty });
       });
     });
@@ -139,15 +152,22 @@ export class TileTerrain implements Terrain {
   /** Material at (x, y) given its boundary jitter (lets the renderer interpolate the jitter). */
   materialJittered(x: number, y: number, jx: number, jy: number): Material {
     const ts = this.tileSize;
-    // Paved areas keep crisp, straight edges.
-    if (this.tileAt(Math.floor(x / ts), Math.floor(y / ts)) === Material.Concrete) return Material.Concrete;
+    // Paving and hedges keep crisp, straight edges.
+    const here = this.tileAt(Math.floor(x / ts), Math.floor(y / ts));
+    if (here === Material.Concrete || here === Material.Hedge) return here;
     const m = this.tileAt(Math.floor((x + jx) / ts), Math.floor((y + jy) / ts));
-    return m === Material.Concrete ? Material.Ground : m;
+    return m === Material.Concrete || m === Material.Hedge ? Material.Ground : m;
   }
 
   solidAt(x: number, y: number): boolean {
+    if (this.gateBlocks(x, y)) return true;
     const m = this.materialAt(x, y);
-    return m === Material.Void || m === Material.Rock || m === Material.Water;
+    return m === Material.Void || m === Material.Rock || m === Material.Water || m === Material.Hedge;
+  }
+
+  private gateBlocks(x: number, y: number): boolean {
+    const g = this.gate;
+    return !!g && !this.gateOpen && x >= g.x0 && x < g.x1 && y >= g.y0 && y < g.y1;
   }
 
   speedAt(x: number, y: number): number {
@@ -155,8 +175,9 @@ export class TileTerrain implements Terrain {
     return m === Material.Rough ? ROUGH_SPEED : m === Material.Crop ? CROP_SPEED : 1;
   }
 
-  /** Cliffs stop shots; they fly on over open ground and the void. */
+  /** Cliffs, hedges and closed gates stop shots; they fly on over open ground and the void. */
   blocksShotsAt(x: number, y: number): boolean {
-    return this.materialAt(x, y) === Material.Rock;
+    const m = this.materialAt(x, y);
+    return m === Material.Rock || m === Material.Hedge || this.gateBlocks(x, y);
   }
 }

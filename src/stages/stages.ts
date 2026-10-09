@@ -1,4 +1,6 @@
 import type { EnemyKind, Spawn } from '../sim/enemies';
+import type { ExitKind } from '../sim/world';
+import { stage3, stage4, stage5 } from './area3';
 import { MapCarver } from './carve';
 import { STAGE01_TERRAIN } from './stage01Map';
 import { STAGE02_TERRAIN } from './stage02Map';
@@ -20,6 +22,8 @@ export interface StageDef {
   spawns?: Spawn[];
   /** Initial heading in degrees (0 = up the map). */
   startHeading?: number;
+  /** How the tank leaves once the cannons are down (default: the hatch). */
+  exit?: ExitKind;
 }
 
 /**
@@ -164,4 +168,4 @@ function stage2(): StageDef {
   };
 }
 
-export const STAGES: StageDef[] = [stage1(), stage2()];
+export const STAGES: StageDef[] = [stage1(), stage2(), stage3(), stage4(), stage5()];

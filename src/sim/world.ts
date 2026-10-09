@@ -47,6 +47,10 @@ export const WORLD_TUNING = {
   guideReach: 72,
   /** Seconds a UFO launcher takes to rise out of its hole. */
   emergeTime: 1.4,
+  /** Seconds the exit gates take to slide open. */
+  gateOpenTime: 1.4,
+  /** A nuke bursting this close to an airborne enemy's centre goes down its centre hole. */
+  centreHoleRadius: 7,
   /** Extra lives (a guess: the original's thresholds are unknown). */
   extendFirst: 20000,
   extendEvery: 70000,
@@ -57,7 +61,17 @@ export interface StageTerrain extends Terrain, ShotTerrain {
   readonly start: { x: number; y: number };
   readonly jumpZones?: readonly { x: number; y: number }[];
   readonly hatch?: { x: number; y: number } | null;
+  /** Exit gates (world box), closed until the stage is cleared. */
+  readonly gate?: { x0: number; y0: number; x1: number; y1: number } | null;
+  gateOpen?: boolean;
 }
+
+/**
+ * How the tank leaves a cleared stage. hatch: drop through the exit hatch.
+ * gate: the gates slide open and the tank drives through into the next stage.
+ * launch: the gates open and the tank drives onto a launch pad and is fired into the air.
+ */
+export type ExitKind = 'hatch' | 'gate' | 'launch';
 
 export interface JumpZone {
   x: number;
@@ -102,6 +116,8 @@ export type WorldEvent =
   | { type: 'stageClear' }
   | { type: 'timeBonus'; seconds: number; points: number }
   | { type: 'hatchDrop' }
+  | { type: 'gateOpen' }
+  | { type: 'launch' }
   | { type: 'respawn' }
   | { type: 'gameOver' }
   | { type: 'extend' };
@@ -121,6 +137,8 @@ export interface WorldOptions {
   startReady?: boolean;
   /** Initial tank heading in radians (0 = up the map). */
   startHeading?: number;
+  /** How the tank leaves once the stage is clear (default: the hatch). */
+  exit?: ExitKind;
 }
 
 export class World {
@@ -148,6 +166,11 @@ export class World {
   /** The jump zone the tank is sitting on, which can't re-trigger until it drives off. */
   private onZone: JumpZone | null = null;
   private readonly hasCannons: boolean;
+  readonly exit: ExitKind;
+  /** Exit drive: waypoints still to reach (the gate's mouth, then the hatch). */
+  private exitRoute: Point[] = [];
+  /** Seconds left before the opening gates let the tank through. */
+  private gateWait = 0;
   score: number;
   lives: number;
   private nextExtend: number;
@@ -168,7 +191,8 @@ export class World {
     this.timeLeft = this.timeLimit;
     this.jumpZones = (terrain.jumpZones ?? []).map((z) => ({ x: z.x, y: z.y, usesLeft: WORLD_TUNING.jumpUses }));
     this.guide = [...(opts.guide ?? [])];
-    this.hasCannons = spawns.some((s) => s.kind === 'cannon1');
+    this.hasCannons = spawns.some((s) => ENEMIES[s.kind].cannon);
+    this.exit = opts.exit ?? 'hatch';
     this.lives = opts.lives;
     this.hard = opts.hard ?? false;
     this.rng = new Rng(opts.seed ?? 1);
@@ -195,7 +219,8 @@ export class World {
     });
     this.playerGround = {
       solidAt: (x, y) =>
-        terrain.solidAt(x, y) || this.enemies.some((e) => tangible(e) && (x - e.x) ** 2 + (y - e.y) ** 2 < ENEMIES[e.kind].radius ** 2),
+        terrain.solidAt(x, y) ||
+        this.enemies.some((e) => tangible(e) && !ENEMIES[e.kind].hover && (x - e.x) ** 2 + (y - e.y) ** 2 < ENEMIES[e.kind].radius ** 2),
       speedAt: (x, y) =>
         terrain.speedAt(x, y) *
         (this.craters.some((c) => (x - c.x) ** 2 + (y - c.y) ** 2 < WORLD_TUNING.craterRadius ** 2) ? WORLD_TUNING.craterSlow : 1),
@@ -226,7 +251,7 @@ export class World {
         break;
       case 'cleared':
         if (this.bonus.points === 0 && this.stateTime >= T.clearMessageTime) this.awardTimeBonus();
-        if (this.stateTime >= T.clearMessageTime + T.bonusMessageTime) this.setState('exiting');
+        if (this.stateTime >= T.clearMessageTime + T.bonusMessageTime) this.startExit();
         break;
       case 'exiting':
         this.driveToHatch(dt);
@@ -245,7 +270,7 @@ export class World {
     }
     if (this.state === 'cleared' || this.state === 'exiting') this.stepWeaponsOnly(dt);
     this.removeDead();
-    if (this.state === 'playing' && this.hasCannons && !this.enemies.some((e) => e.kind === 'cannon1')) this.stageClear();
+    if (this.state === 'playing' && this.hasCannons && !this.enemies.some((e) => ENEMIES[e.kind].cannon)) this.stageClear();
     return this.events;
   }
 
@@ -278,32 +303,55 @@ export class World {
     this.events.push({ type: 'timeBonus', seconds, points: Math.max(0, this.bonus.points) });
   }
 
-  /** Scripted ending: turn towards the hatch, drive onto it, then drop through. */
+  private startExit(): void {
+    this.setState('exiting');
+    const g = this.terrain.gate;
+    this.exitRoute = [];
+    if (g) {
+      // Open the gates, then drive through their middle.
+      this.terrain.gateOpen = true;
+      this.gateWait = WORLD_TUNING.gateOpenTime;
+      this.events.push({ type: 'gateOpen' });
+      const mid = { x: (g.x0 + g.x1) / 2, y: (g.y0 + g.y1) / 2 };
+      const h = this.terrain.hatch;
+      // Line up square to the gate first: in front of it on the tank's side.
+      if (g.x1 - g.x0 >= g.y1 - g.y0) this.exitRoute.push({ x: mid.x, y: this.tank.y < mid.y ? g.y0 - 24 : g.y1 + 24 });
+      else this.exitRoute.push({ x: this.tank.x < mid.x ? g.x0 - 24 : g.x1 + 24, y: mid.y });
+      this.exitRoute.push(mid);
+      if (h) this.exitRoute.push(h);
+    } else if (this.terrain.hatch) {
+      this.exitRoute.push(this.terrain.hatch);
+    }
+  }
+
+  /** Scripted ending: wait for the gates, drive along the exit route, then drop through (or launch). */
   private driveToHatch(dt: number): void {
-    const h = this.terrain.hatch;
+    if (this.gateWait > 0) {
+      this.gateWait -= dt;
+      return;
+    }
     const t = this.tank;
+    const h = this.exitRoute[0];
     if (!h) {
       if (this.stateTime >= WORLD_TUNING.hatchDropTime) this.setState('done');
       return;
     }
     const dist = Math.hypot(h.x - t.x, h.y - t.y);
-    if (dist > 1) {
-      const want = headingTo(t.x, t.y, h.x, h.y);
-      t.heading += clamp(angleDiff(t.heading, want), TANK_TUNING.turnRate * dt);
-      if (Math.abs(angleDiff(t.heading, want)) < 0.2) {
-        const step = Math.min(dist, WORLD_TUNING.hatchDriveSpeed * dt);
-        t.x += ((h.x - t.x) / dist) * step;
-        t.y += ((h.y - t.y) / dist) * step;
-      }
-      this.stateTime = 0;
-      if (Math.hypot(h.x - t.x, h.y - t.y) <= 1) {
-        t.x = h.x;
-        t.y = h.y;
-        this.events.push({ type: 'hatchDrop' });
-      }
-      return;
+    const want = headingTo(t.x, t.y, h.x, h.y);
+    t.heading += clamp(angleDiff(t.heading, want), TANK_TUNING.turnRate * dt);
+    if (Math.abs(angleDiff(t.heading, want)) < 0.2 || dist < 4) {
+      const step = Math.min(dist, WORLD_TUNING.hatchDriveSpeed * dt);
+      t.x += ((h.x - t.x) / Math.max(dist, 1e-6)) * step;
+      t.y += ((h.y - t.y) / Math.max(dist, 1e-6)) * step;
     }
-    if (this.stateTime >= WORLD_TUNING.hatchDropTime) this.setState('done');
+    this.stateTime = 0;
+    if (Math.hypot(h.x - t.x, h.y - t.y) > 0.5) return;
+    t.x = h.x;
+    t.y = h.y;
+    this.exitRoute.shift();
+    if (this.exitRoute.length > 0) return;
+    if (this.exit === 'gate') this.setState('done');
+    else this.events.push({ type: this.exit === 'launch' ? 'launch' : 'hatchDrop' });
   }
 
   /** Let shells already in flight land after the stage is won. */
@@ -349,7 +397,10 @@ export class World {
     }
 
     for (const shot of [...this.weapons.shots]) {
-      const target = this.enemies.find((e) => tangible(e) && Math.hypot(shot.x - e.x, shot.y - e.y) <= ENEMIES[e.kind].radius + 1.5);
+      // Shells pass beneath airborne enemies.
+      const target = this.enemies.find(
+        (e) => tangible(e) && !ENEMIES[e.kind].airborne && Math.hypot(shot.x - e.x, shot.y - e.y) <= ENEMIES[e.kind].radius + 1.5,
+      );
       if (target) {
         this.weapons.removeShot(shot);
         this.damage(target, 1, false);
@@ -382,7 +433,10 @@ export class World {
 
   private applyNuke(blast: Blast): void {
     for (const e of this.enemies) {
-      if (tangible(e) && blastHits(blast, e.x, e.y, ENEMIES[e.kind].radius)) this.damage(e, WORLD_TUNING.nukeDamage, true);
+      if (!tangible(e) || !blastHits(blast, e.x, e.y, ENEMIES[e.kind].radius)) continue;
+      if (!ENEMIES[e.kind].airborne) this.damage(e, WORLD_TUNING.nukeDamage, true);
+      // Airborne: one hit per nuke, unless it goes straight down the centre hole.
+      else this.damage(e, Math.hypot(blast.x - e.x, blast.y - e.y) <= WORLD_TUNING.centreHoleRadius ? e.hp : 1, true);
     }
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
@@ -483,10 +537,18 @@ export class World {
 
   private moveEnemy(e: Enemy, dx: number, dy: number): void {
     const r = ENEMIES[e.kind].radius;
+    if (ENEMIES[e.kind].hover) {
+      // Hovering craft fly over cliffs and the void, keeping only off the tank itself.
+      if (Math.hypot(e.x + dx - this.tank.x, e.y + dy - this.tank.y) > r + TANK_TUNING.radius || ENEMIES[e.kind].airborne) {
+        e.x += dx;
+        e.y += dy;
+      }
+      return;
+    }
     const clear = (x: number, y: number) =>
       fits(this.terrain, x, y, r) &&
       Math.hypot(x - this.tank.x, y - this.tank.y) > r + TANK_TUNING.radius &&
-      this.enemies.every((o) => o === e || !tangible(o) || Math.hypot(x - o.x, y - o.y) > r + ENEMIES[o.kind].radius);
+      this.enemies.every((o) => o === e || !tangible(o) || ENEMIES[o.kind].hover || Math.hypot(x - o.x, y - o.y) > r + ENEMIES[o.kind].radius);
     if (clear(e.x + dx, e.y + dy)) {
       e.x += dx;
       e.y += dy;

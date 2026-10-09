@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ENEMIES, type Spawn } from '../src/sim/enemies';
 import { createTank, stepTank } from '../src/sim/tank';
 import { WEAPON_TUNING } from '../src/sim/weapons';
+import { TileTerrain } from '../src/sim/terrain';
 import { World, WORLD_TUNING, type StageTerrain, type WorldEvent } from '../src/sim/world';
 
 const DT = 1 / 60;
@@ -341,5 +342,71 @@ describe('waves and UFO launchers', () => {
   it('a parked tank never fires', () => {
     const w = new World(field(), [{ kind: 'parking', tx: 50, ty: 47 }], { startReady: false, lives: 3 });
     expect(types(run(w, 5))).not.toContain('enemyFired');
+  });
+});
+
+describe('area 3: gates, hovering and airborne enemies', () => {
+  it('a gate blocks the way until the cannons fall, then slides open and the tank drives through', () => {
+    // A real tile map: a corridor north, a gate across it, cannons before it and the exit beyond.
+    const map = [
+      '#######',
+      '#..X..#',
+      '#.....#',
+      '#GGGGG#',
+      '#.....#',
+      '#..C..#',
+      '#.....#',
+      '#.....#',
+      '#.....#',
+      '#..P..#',
+      '#######',
+    ];
+    const t = new TileTerrain(map, TILE, 1);
+    expect(t.solidAt(3.5 * TILE, 3.5 * TILE)).toBe(true);
+    const w = new World(t, t.spawns, { startReady: false, lives: 3, exit: 'gate' });
+    w.invulnerable = 1e9;
+    for (const e of w.enemies) e.hp = 0.001;
+    w.step(DT, 'idle', FIRE);
+    const events = run(w, 0.6 + WORLD_TUNING.clearMessageTime + WORLD_TUNING.bonusMessageTime + 10);
+    expect(types(events)).toContain('gateOpen');
+    expect(types(events)).not.toContain('hatchDrop');
+    expect(t.solidAt(3.5 * TILE, 3.5 * TILE)).toBe(false);
+    expect(w.state).toBe('done');
+    expect(w.tank.y).toBeCloseTo(1.5 * TILE);
+  });
+
+  it('a launch exit fires the tank off the pad instead of dropping it through a hatch', () => {
+    const terrain = { ...field(), hatch: { x: 50.5 * TILE, y: 44.5 * TILE } };
+    const w = new World(terrain, [{ kind: 'cannon3', tx: 50, ty: 46 }], { startReady: false, lives: 3, exit: 'launch' });
+    for (const e of w.enemies) e.hp = 0.001;
+    w.step(DT, 'idle', FIRE);
+    const events = run(w, 0.6 + WORLD_TUNING.clearMessageTime + WORLD_TUNING.bonusMessageTime + 8);
+    expect(types(events)).toContain('stageClear');
+    expect(types(events)).toContain('launch');
+    expect(w.state).toBe('done');
+  });
+
+  it("shells pass beneath a generator; each nuke is one hit, unless it drops down the centre hole", () => {
+    const w = new World(field(), [{ kind: 'generator', tx: 50, ty: 45 }], { startReady: false, lives: 3 });
+    w.invulnerable = 1e9;
+    const g = w.enemies[0];
+    w.step(DT, 'idle', FIRE);
+    run(w, 0.3);
+    expect(g.hp).toBe(ENEMIES.generator.hits[0]);
+    (w as unknown as { applyNuke: (b: object) => void }).applyNuke({ kind: 'nuke', x: g.x + 20, y: g.y, radius: 30 });
+    expect(g.hp).toBe(ENEMIES.generator.hits[0] - 1);
+    (w as unknown as { applyNuke: (b: object) => void }).applyNuke({ kind: 'nuke', x: g.x + 2, y: g.y, radius: 30 });
+    expect(g.state).toBe('dead');
+  });
+
+  it('fourlegs hover across the void that stops tanks', () => {
+    const chasm = (_x: number, y: number) => y > 37 * TILE && y < 44 * TILE;
+    const w = new World(field(chasm), [{ kind: 'fourlegs', tx: 50, ty: 34 }, { kind: 'type1', tx: 52, ty: 34 }], { startReady: false, lives: 3 });
+    w.invulnerable = 1e9;
+    w.wakeAllWithin(1000);
+    run(w, 6);
+    const [legs, tank] = w.enemies;
+    expect(legs.y).toBeGreaterThan(44 * TILE);
+    expect(tank.y).toBeLessThan(38 * TILE);
   });
 });

@@ -191,3 +191,204 @@ export function holeArt(): Rgba {
   });
   return p.toRgba();
 }
+
+const COPPER: RGB[] = [[92, 44, 30], [128, 64, 44], [160, 86, 60], [190, 110, 80], [214, 138, 104], [236, 170, 140], [250, 206, 182]];
+const TAN: RGB[] = [[96, 74, 52], [130, 102, 74], [162, 132, 100], [192, 162, 128], [218, 190, 156], [240, 220, 190]];
+const GOLD: RGB[] = [[100, 64, 8], [150, 100, 10], [196, 140, 20], [230, 180, 40], [250, 214, 90], [255, 240, 160]];
+const TEAL: RGB[] = [[30, 60, 64], [50, 90, 96], [80, 130, 134], [120, 170, 170], [170, 210, 206], [220, 240, 236]];
+const GEN_RED: RGB[] = [[90, 24, 24], [136, 40, 36], [176, 64, 56], [208, 92, 80], [232, 128, 112], [250, 170, 150]];
+const LAVENDER: RGB[] = [[60, 60, 110], [90, 90, 150], [120, 120, 190], [160, 160, 220], [200, 200, 245]];
+
+/** Armoured Type 1: the light tank with bolted-on grey plates over its hull and treads. */
+export const TYPE1A_TANK = (): Rgba =>
+  tankArt({
+    w: 14,
+    h: 18,
+    treadW: 3,
+    barrelLen: 4,
+    barrels: [0],
+    barrelW: 2,
+    turretR: 3.4,
+    hull: RUST,
+    tread: SLATE_TREAD,
+    turret: RUST,
+    barrel: PALE[5],
+    extras: (p, { top, bodyH }) => {
+      p.slab(2, top + bodyH - 6, 10, 4, PALE);
+      p.rect(1, top + 2, 3, 2, PALE[4]);
+      p.rect(11, top + 2, 3, 2, PALE[4]);
+    },
+  });
+
+/** Type 4: an amphibious tank, pale tan, with flotation pods either side of the bow. */
+export const TYPE4_TANK = (): Rgba =>
+  tankArt({
+    w: 18,
+    h: 24,
+    treadW: 4,
+    barrelLen: 5,
+    barrels: [0],
+    barrelW: 2,
+    turretR: 4.2,
+    hull: TAN,
+    tread: GREY_TREAD,
+    turret: TAN.slice(1),
+    barrel: TAN[5],
+    extras: (p, { top }) => {
+      for (const x of [1, 13]) p.slab(x, top - 1, 5, 9, TAN.slice(2));
+    },
+  });
+
+/** Type 6: a broad copper heavy tank with a chevron glacis and a single long gun. */
+export const TYPE6_TANK = (): Rgba =>
+  tankArt({
+    w: 28,
+    h: 32,
+    treadW: 6,
+    barrelLen: 6,
+    barrels: [0],
+    barrelW: 3,
+    turretR: 6,
+    hull: COPPER,
+    tread: GREY_TREAD,
+    turret: COPPER.slice(1),
+    barrel: PALE[4],
+    extras: (p, { cx, top }) => {
+      for (let i = 0; i < 4; i++) p.rect(Math.round(cx - 7 + i), top + 3 + i, 2, 1, COPPER[6]);
+      for (let i = 0; i < 4; i++) p.rect(Math.round(cx + 6 - i), top + 3 + i, 2, 1, COPPER[6]);
+    },
+  });
+
+/** Type 7-A: a long copper tank with missile racks along its flanks. */
+export const TYPE7A_TANK = (): Rgba =>
+  tankArt({
+    w: 28,
+    h: 38,
+    treadW: 5,
+    barrelLen: 5,
+    barrels: [0],
+    barrelW: 2,
+    turretR: 5.5,
+    hull: COPPER,
+    tread: GREY_TREAD,
+    turret: COPPER.slice(1),
+    barrel: PALE[5],
+    extras: (p, { cx, cy }) => {
+      for (const side of [-1, 1]) {
+        const x = Math.round(cx + side * 8 - 1.5);
+        p.slab(x, Math.round(cy + 4), 4, 12, PALE);
+        for (let i = 0; i < 3; i++) p.rect(x, Math.round(cy + 4 + i * 4), 4, 1, RED[2]);
+      }
+    },
+  });
+
+/** Type 7-B: the copper heavy with a turret of sixteen gun ports. */
+export const TYPE7B_TANK = (): Rgba =>
+  tankArt({
+    w: 28,
+    h: 38,
+    treadW: 5,
+    barrelLen: 3,
+    barrels: [-4, 4],
+    barrelW: 2,
+    turretR: 8,
+    hull: COPPER,
+    tread: GREY_TREAD,
+    turret: COPPER.slice(2),
+    barrel: COPPER[5],
+    extras: (p, { cx, cy }) => {
+      for (let i = 0; i < 16; i++) {
+        const a = (i * Math.PI) / 8;
+        p.rect(Math.round(cx + Math.sin(a) * 7 - 0.5), Math.round(cy - Math.cos(a) * 7 - 0.5), 1, 1, ORANGE[2]);
+      }
+      p.disc(cx, cy, 3, LAVENDER);
+    },
+  });
+
+/** 101 Scouter: a small, quick, gold half-track. */
+export const SCOUTER = (): Rgba =>
+  tankArt({ w: 14, h: 17, treadW: 3, barrelLen: 3, barrels: [0], barrelW: 2, turretR: 3, hull: GOLD, tread: SLATE_TREAD, turret: GOLD.slice(1), barrel: GOLD[5] });
+
+/** 501 Fourlegs: a hovering drone, four legs splayed in an X with glowing orange feet. */
+export function fourlegsArt(): Rgba {
+  const p = new Painter(20, 20);
+  const c = 9.5;
+  for (let i = 0; i < 4; i++) {
+    const a = Math.PI / 4 + (i * Math.PI) / 2;
+    for (let r = 2; r <= 7; r += 0.5) p.rect(Math.round(c + Math.cos(a) * r - 0.5), Math.round(c + Math.sin(a) * r - 0.5), 2, 2, TEAL[1 + (r > 5 ? 1 : 2)]);
+    p.disc(c + Math.cos(a) * 8, c + Math.sin(a) * 8, 1.6, ORANGE);
+  }
+  p.slab(7, 5, 6, 10, TEAL.slice(2));
+  p.disc(c, c - 1, 2.2, LAVENDER);
+  p.outline();
+  return p.toRgba();
+}
+
+/**
+ * Generator: a huge three-armed flying fortress. Pods with portholes on each arm,
+ * missile tubes, and the black centre hole a lucky nuke can drop straight into.
+ */
+export function generatorArt(): Rgba {
+  const size = 76;
+  const c = (size - 1) / 2;
+  const p = new Painter(size, size);
+  const arm = (a: number) => {
+    const at = (r: number, da = 0): [number, number] => [c + Math.sin(a + da) * r, c - Math.cos(a + da) * r];
+    p.polygon([at(8, -1.1), at(31, -0.3), at(34, 0), at(31, 0.3), at(8, 1.1)], (x, y) =>
+      shade(GEN_RED, 0.45 + ((x - c) + (y - c)) / 90 + (hash2(x | 0, y | 0, 7) - 0.5) * 0.1),
+    );
+    const [px, py] = at(24);
+    p.disc(px, py, 7, PALE);
+    p.disc(px, py, 4.5, LAVENDER);
+    for (let i = -1; i <= 1; i++) p.rect(Math.round(px - 3), Math.round(py + i * 1.6), 6, 1, LAVENDER[4]);
+  };
+  for (const a of [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3]) arm(a);
+  // Missile tubes between the arms.
+  for (const a of [Math.PI / 3, Math.PI, (5 * Math.PI) / 3]) {
+    const x = c + Math.sin(a) * 20;
+    const y = c - Math.cos(a) * 20;
+    p.disc(x, y, 4, GREY_TREAD.slice(1));
+    p.disc(x, y, 2, RED);
+  }
+  p.disc(c, c, 13, GEN_RED);
+  p.disc(c, c, 9, GREY_TREAD.slice(0, 2));
+  p.disc(c, c, 6.5, [[4, 10, 6], [8, 20, 12]]);
+  p.outline();
+  return p.toRgba();
+}
+
+/** Type 2 cannon: the fortress gun with four long barrels. */
+export function cannon2Art(): Rgba {
+  const p = new Painter(50, 56);
+  p.slab(6, 36, 38, 18, JADE.slice(0, 6));
+  for (const bx of [-10.5, -3.5, 3.5, 10.5]) {
+    p.rect(25 + bx - 2, 2, 4, 26, JADE[7]);
+    p.rect(25 + bx - 2, 2, 1, 26, JADE[5]);
+    p.rect(25 + bx + 1, 2, 1, 26, JADE[8]);
+    p.rect(25 + bx - 2, 2, 4, 3, JADE[2]);
+  }
+  p.disc(25, 35, 17, JADE);
+  p.disc(25, 35, 5, JADE.slice(2));
+  p.outline();
+  return p.toRgba();
+}
+
+/** Type 3 cannon: an armoured head with ribbed flanks, glaring red eyes and three stubby guns. */
+export function cannon3Art(): Rgba {
+  const p = new Painter(52, 56);
+  p.slab(5, 12, 42, 34, JADE.slice(0, 7));
+  for (let y = 14; y < 44; y += 4) {
+    p.rect(1, y, 5, 2, JADE[3]);
+    p.rect(46, y, 5, 2, JADE[3]);
+  }
+  for (const bx of [-8, 0, 8]) {
+    p.rect(26 + bx - 2, 1, 4, 14, PALE[3]);
+    p.rect(26 + bx - 2, 1, 1, 14, PALE[1]);
+  }
+  p.slab(12, 18, 28, 8, JADE.slice(3));
+  p.rect(16, 28, 6, 3, RED[2]);
+  p.rect(30, 28, 6, 3, RED[2]);
+  p.slab(18, 36, 16, 8, JADE.slice(1, 5));
+  p.outline();
+  return p.toRgba();
+}

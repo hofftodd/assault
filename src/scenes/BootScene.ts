@@ -1,17 +1,27 @@
 import Phaser from 'phaser';
 import {
   bulletArt,
+  cannon2Art,
+  cannon3Art,
   cannonArt,
+  fourlegsArt,
+  generatorArt,
   craterArt,
   holeArt,
   laserArt,
   missileArt,
   PARKING_TANK,
+  SCOUTER,
   torchikaArt,
   TYPE1_TANK,
+  TYPE1A_TANK,
   TYPE2_TANK,
   TYPE3_TANK,
+  TYPE4_TANK,
   TYPE5_TANK,
+  TYPE6_TANK,
+  TYPE7A_TANK,
+  TYPE7B_TANK,
   ufoArt,
 } from '../art/enemySprites';
 import { crosshairArt, shockwaveArt } from '../art/crosshair';
@@ -50,6 +60,16 @@ export class BootScene extends Phaser.Scene {
     addRgbaTexture(this, 'type2', TYPE2_TANK());
     addRgbaTexture(this, 'type3', TYPE3_TANK());
     addRgbaTexture(this, 'type5', TYPE5_TANK());
+    addRgbaTexture(this, 'type1a', TYPE1A_TANK());
+    addRgbaTexture(this, 'type4', TYPE4_TANK());
+    addRgbaTexture(this, 'type6', TYPE6_TANK());
+    addRgbaTexture(this, 'type7a', TYPE7A_TANK());
+    addRgbaTexture(this, 'type7b', TYPE7B_TANK());
+    addRgbaTexture(this, 'scouter', SCOUTER());
+    addRgbaTexture(this, 'fourlegs', fourlegsArt());
+    addRgbaTexture(this, 'generator', generatorArt());
+    addRgbaTexture(this, 'cannon2', cannon2Art());
+    addRgbaTexture(this, 'cannon3', cannon3Art());
     addRgbaTexture(this, 'ufo', ufoArt());
     addRgbaTexture(this, 'parking', PARKING_TANK());
     addRgbaTexture(this, 'laser', laserArt());

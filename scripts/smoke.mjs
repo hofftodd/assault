@@ -261,6 +261,78 @@ try {
   await page.waitForTimeout(7300);
   await shot('20-how-to-play');
 
+  // Phase 5: area 3. Stage 3 ends at gates that slide open onto stage 4; stage 5 ends on a launch pad.
+  await page.goto('http://localhost:4173/?play&stage=3');
+  await page.waitForFunction(() => window.__assault?.stage === 3 && window.__assault.world.state === 'playing', null, { timeout: 20000 }).catch(() => {});
+  const s3 = await page.evaluate(() => {
+    const w = window.__assault.world;
+    return { time: w.timeLeft, gate: !!w.terrain.gate, cannons: w.enemies.filter((e) => e.kind.startsWith('cannon')).length, sixteen: w.enemies.filter((e) => e.kind === 'type7b').length };
+  });
+  check(s3.time > 105 && s3.time <= 110 && s3.gate && s3.cannons === 4 && s3.sixteen === 2, `stage 3: 1:50 clock, exit gates, four cannons, two Type 7-Bs (${JSON.stringify(s3)})`);
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.invulnerable = 1e9;
+    const g = w.terrain.gate;
+    Object.assign(w.tank, { x: (g.x0 + g.x1) / 2, y: g.y0 - 120, heading: Math.PI });
+  });
+  await page.waitForTimeout(1200);
+  await shot('21-stage3-battery');
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    for (let i = w.enemies.length - 1; i >= 0; i--) if (w.enemies[i].kind.startsWith('cannon')) w.enemies.splice(i, 1);
+  });
+  await page.waitForFunction(() => window.__assault.world.state === 'exiting', null, { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(900);
+  await shot('22-gates-opening');
+  check(await page.evaluate(() => window.__assault.world.terrain.gateOpen === true), 'the gates slide open once the cannons fall');
+  await page.waitForFunction(() => window.__assault.stage === 4 && window.__assault.world.state === 'playing', null, { timeout: 20000 }).catch(() => {});
+  const s4 = await page.evaluate(() => {
+    const w = window.__assault.world;
+    return { stage: window.__assault.stage, time: w.timeLeft, zones: w.jumpZones.length, generator: w.enemies.some((e) => e.kind === 'generator'), cannons: w.enemies.filter((e) => e.kind === 'cannon1').length };
+  });
+  check(s4.stage === 4 && s4.time > 125 && s4.zones === 2 && s4.generator && s4.cannons === 7, `the tank drives through into stage 4: 2:10, two jump zones, a Generator, seven cannons (${JSON.stringify(s4)})`);
+  await page.waitForTimeout(400);
+  await shot('23-stage4');
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.invulnerable = 1e9;
+    const g = w.enemies.find((e) => e.kind === 'generator');
+    Object.assign(w.tank, { x: g.x, y: g.y + 90, heading: 0 });
+  });
+  await page.waitForTimeout(1500);
+  await shot('24-generator');
+
+  await page.goto('http://localhost:4173/?play&stage=5');
+  await page.waitForFunction(() => window.__assault?.stage === 5 && window.__assault.world.state === 'playing', null, { timeout: 30000 }).catch(() => {});
+  const s5 = await page.evaluate(() => {
+    const w = window.__assault.world;
+    return { time: w.timeLeft, zones: w.jumpZones.length, exit: w.exit, hidden: w.enemies.filter((e) => e.state === 'hidden').length };
+  });
+  check(s5.time > 355 && s5.zones === 4 && s5.exit === 'launch' && s5.hidden > 20, `stage 5: 6:00 clock, four jump zones, buried launchers and Type 4s, a launch pad (${JSON.stringify(s5)})`);
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.invulnerable = 1e9;
+    for (const e of w.enemies) if (e.kind === 'type4') Object.assign(e, { state: 'emerging', emergeTime: 0.5, after: undefined });
+    const e = w.enemies.find((e) => e.kind === 'type4');
+    Object.assign(w.tank, { x: e.x, y: e.y + 70, heading: 0 });
+  });
+  await page.waitForTimeout(900);
+  await shot('25-type4-surfacing');
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    const g = w.terrain.gate;
+    Object.assign(w.tank, { x: g.x0 - 100, y: (g.y0 + g.y1) / 2, heading: Math.PI / 2 });
+  });
+  await page.waitForTimeout(1200);
+  await shot('26-hedges-and-battery');
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    for (let i = w.enemies.length - 1; i >= 0; i--) if (w.enemies[i].kind.startsWith('cannon')) w.enemies.splice(i, 1);
+  });
+  await page.waitForFunction(() => window.__assault.world.state === 'done', null, { timeout: 25000 }).catch(() => {});
+  check(await page.evaluate(() => window.__assault.world.state === 'done'), 'stage 5 ends with the tank launched off the pad');
+  await shot('27-after-stage5');
+
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {
   await browser.close();

@@ -64,7 +64,10 @@ const enum Depth {
 const CROSSHAIR_MAX_TINT = 0xff3030;
 
 /** Emplacements keep their art upright; vehicles and turrets turn. */
-const FIXED_FACING: Partial<Record<EnemyKind, boolean>> = { torchika1: true, torchika2: true, ufo: true, parking: true };
+const FIXED_FACING: Partial<Record<EnemyKind, boolean>> = { torchika1: true, torchika2: true, ufo: true, parking: true, generator: true };
+
+/** How high flying enemies ride above their shadows (shadow offset multiplier). */
+const FLYING_LIFT: Partial<Record<EnemyKind, number>> = { ufo: 1.8, fourlegs: 3, generator: 9 };
 
 interface EnemyView {
   body: Phaser.GameObjects.Image;
@@ -86,6 +89,7 @@ export class GameScene extends Phaser.Scene {
   private craterViews = new Map<Crater, Phaser.GameObjects.Image>();
   private zoneViews = new Map<JumpZone, Phaser.GameObjects.Image>();
   private stage!: StageDef;
+  private gatePanels: { panel: Phaser.GameObjects.Container; dx: number; dy: number }[] = [];
   private testMap = false;
   private terrainReady = false;
   /** Seconds since the last stage finished, while showing the end-of-content message. */
@@ -140,7 +144,8 @@ export class GameScene extends Phaser.Scene {
     // Start painting the next stage while this one is played.
     const next = STAGES[this.session.stageIndex + 1];
     if (next && !this.testMap && !TERRAIN_TILES.has(`terrain-${next.number}`)) void requestTerrain(`terrain-${next.number}`, next.map, next.seed);
-    if (terrain.hatch) this.add.image(terrain.hatch.x, terrain.hatch.y, 'hatch').setDepth(Depth.Pad).setScale(S);
+    if (terrain.hatch && st.exit !== 'gate') this.add.image(terrain.hatch.x, terrain.hatch.y, 'hatch').setDepth(Depth.Pad).setScale(S);
+    this.gatePanels = terrain.gate ? this.addGate(terrain.gate) : [];
 
     const spawns = params.has('peaceful') ? [] : this.testMap ? TEST_SPAWNS : [...terrain.spawns, ...(st.spawns ?? [])];
     const tile = (p: [number, number]) => ({ x: (p[0] + 0.5) * 16, y: (p[1] + 0.5) * 16 });
@@ -152,6 +157,7 @@ export class GameScene extends Phaser.Scene {
       timeLimit: st.timeLimit,
       guide: st.guide.map(tile),
       startHeading: ((st.startHeading ?? 0) * Math.PI) / 180,
+      exit: st.exit,
     });
     for (const z of this.world.jumpZones) this.zoneViews.set(z, this.add.image(z.x, z.y, 'jumpZone').setDepth(Depth.Pad).setScale(S));
     this.tankShadow = this.add.image(0, 0, 'tank').setTintFill(0x000000).setAlpha(0.35).setDepth(Depth.Shadow);
@@ -263,7 +269,7 @@ export class GameScene extends Phaser.Scene {
             : `TIME BONUS!\n\n${w.bonus.seconds}*50 POINTS\n\n= ${Math.max(0, w.bonus.points)} POINTS`;
         break;
       case 'exiting':
-        s.message = 'NOW YOU ASSAULT ON\n\nNEXT STAGE!!';
+        s.message = w.exit === 'gate' ? null : 'NOW YOU ASSAULT ON\n\nNEXT STAGE!!';
         break;
       case 'done':
         s.message = `CONGRATULATIONS!\n\nSTAGE ${pad2(this.stage.number)} IS YOURS.\n\n\nMORE STAGES ARE\n\nON THE WAY...`;
@@ -330,6 +336,15 @@ export class GameScene extends Phaser.Scene {
         this.sfx.play('empty');
         break;
       case 'enemyEmerging':
+        if (ENEMIES[e.enemy.kind].emergeFrom === 'water') {
+          // Surfacing: rings of foam spread out around it.
+          for (const delay of [0, 300]) {
+            const ring = this.add.circle(e.enemy.x, e.enemy.y, 6).setStrokeStyle(1, 0xe0fff8, 0.9).setDepth(Depth.Crater).setDisplaySize(4, 4);
+            this.tweens.add({ targets: ring, displayWidth: 40, displayHeight: 40, alpha: 0, delay, duration: 900, onComplete: () => ring.destroy() });
+          }
+          this.sfx.play('raise');
+          break;
+        }
         this.tweens.add({
           targets: this.add.image(e.enemy.x, e.enemy.y, 'hole').setDepth(Depth.Crater).setScale(0.2 * S),
           scale: S,
@@ -369,6 +384,17 @@ export class GameScene extends Phaser.Scene {
         this.sfx.play('hatch');
         this.hatchDrop();
         break;
+      case 'gateOpen':
+        this.sfx.play('hatch');
+        for (const { panel, dx, dy } of this.gatePanels) {
+          // The leaves slide away into the walls on either side.
+          this.tweens.add({ targets: panel, x: panel.x + dx, y: panel.y + dy, alpha: 0, duration: WORLD_TUNING.gateOpenTime * 1000, ease: 'Sine.easeIn' });
+        }
+        break;
+      case 'launch':
+        this.sfx.play('raise');
+        this.launch();
+        break;
       case 'extend':
         this.sfx.play('extend');
         break;
@@ -389,6 +415,45 @@ export class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: [this.tankSprite], scale: 0.3 * S, delay: 700, duration: 900, ease: 'Cubic.easeIn' });
     this.cameras.main.fadeOut(600, 0, 0, 0);
     this.time.delayedCall(1700, () => this.cameras.main.fadeIn(1));
+  }
+
+  /** The launch pad fires the tank up into the sky: it looms larger as it rises, then the screen whites out. */
+  private launch(): void {
+    this.tweens.add({ targets: this.tankSprite, scale: 2.4 * S, duration: 1600, ease: 'Cubic.easeIn' });
+    this.tweens.add({ targets: this.tankShadow, alpha: 0, duration: 800 });
+    this.zoomTo(0.7);
+    this.cameras.main.fadeOut(1600, 255, 255, 255);
+    this.time.delayedCall(2000, () => this.cameras.main.fadeIn(1));
+  }
+
+  /**
+   * Exit gates: two heavy steel leaves with rows of blue lights, meeting in the middle
+   * of the gateway. They slide apart (into the walls) once the stage is clear.
+   */
+  private addGate(g: { x0: number; y0: number; x1: number; y1: number }): { panel: Phaser.GameObjects.Container; dx: number; dy: number }[] {
+    const w = g.x1 - g.x0;
+    const h = g.y1 - g.y0;
+    const across = w >= h;
+    const leaves: { panel: Phaser.GameObjects.Container; dx: number; dy: number }[] = [];
+    for (const side of [0, 1]) {
+      const lw = across ? w / 2 : w;
+      const lh = across ? h : h / 2;
+      const x = g.x0 + (across ? side * lw : 0);
+      const y = g.y0 + (across ? 0 : side * lh);
+      const parts: Phaser.GameObjects.GameObject[] = [
+        this.add.rectangle(0, 0, lw, lh, 0x3a4458).setOrigin(0, 0).setStrokeStyle(1, 0x161a24),
+        this.add.rectangle(1, 1, lw - 2, 1, 0x8a96b0).setOrigin(0, 0),
+      ];
+      const n = Math.max(1, Math.floor((across ? lw : lh) / 8));
+      for (let i = 0; i < n; i++) {
+        const t = (i + 0.5) / n;
+        parts.push(this.add.rectangle(across ? t * lw : lw / 2, across ? lh / 2 : t * lh, 3, 3, 0x60a0ff).setStrokeStyle(1, 0x203060));
+      }
+      const panel = this.add.container(x, y, parts).setDepth(Depth.Pad + 0.2);
+      const away = side === 0 ? -1 : 1;
+      leaves.push({ panel, dx: across ? away * lw : 0, dy: across ? 0 : away * lh });
+    }
+    return leaves;
   }
 
   /** As in the original: the screen dims while a white ring sweeps out over the blast area. */
@@ -475,10 +540,11 @@ export class GameScene extends Phaser.Scene {
       if (e.state === 'hidden') continue;
       alive.add(e.id);
       const v = this.enemyViews.get(e.id) ?? this.addEnemyView(e);
-      const rot = FIXED_FACING[e.kind] ? 0 : e.heading;
+      // The generator turns slowly as it hovers.
+      const rot = e.kind === 'generator' ? this.time.now / 3000 : FIXED_FACING[e.kind] ? 0 : e.heading;
       // Rising out of its hole: grows from nothing, its shadow drawing away as it lifts.
       const rise = e.state === 'emerging' ? Math.min(1, e.emergeTime / WORLD_TUNING.emergeTime) : 1;
-      const lift = e.kind === 'ufo' ? 1.8 : 1;
+      const lift = FLYING_LIFT[e.kind] ?? 1;
       v.body.setPosition(e.x, e.y).setRotation(rot).setScale(rise * S);
       v.shadow.setPosition(e.x + SHADOW_X * lift * rise, e.y + SHADOW_Y * lift * rise).setRotation(rot).setScale(rise * S);
       if (e.flash > 0) v.body.setTintFill(0xffffff);
@@ -495,7 +561,8 @@ export class GameScene extends Phaser.Scene {
   private addEnemyView(e: Enemy): EnemyView {
     const v = {
       shadow: this.add.image(e.x, e.y, e.kind).setTintFill(0x000000).setAlpha(0.35).setDepth(Depth.Shadow),
-      body: this.add.image(e.x, e.y, e.kind).setDepth(Depth.Enemy),
+      // Airborne craft fly above everything on the ground, the player's shells included.
+      body: this.add.image(e.x, e.y, e.kind).setDepth(ENEMIES[e.kind].airborne ? Depth.Nuke + 0.5 : Depth.Enemy),
     };
     this.enemyViews.set(e.id, v);
     return v;

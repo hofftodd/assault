@@ -2,7 +2,26 @@
  * Enemy roster. Hits and points are from the StrategyWiki Gameplay page; movement
  * and fire-rate numbers are estimates to tune against the original.
  */
-export type EnemyKind = 'type1' | 'type2' | 'type3' | 'type5' | 'torchika1' | 'torchika2' | 'cannon1' | 'ufo' | 'parking';
+export type EnemyKind =
+  | 'type1'
+  | 'type1a'
+  | 'type2'
+  | 'type3'
+  | 'type4'
+  | 'type5'
+  | 'type6'
+  | 'type7a'
+  | 'type7b'
+  | 'scouter'
+  | 'fourlegs'
+  | 'generator'
+  | 'torchika1'
+  | 'torchika2'
+  | 'cannon1'
+  | 'cannon2'
+  | 'cannon3'
+  | 'ufo'
+  | 'parking';
 
 export type ProjectileKind = 'orange' | 'pink' | 'missile' | 'laser';
 
@@ -56,6 +75,17 @@ export interface EnemySpec {
   nukeOnly?: boolean;
   /** Never fires (e.g. a parked tank). */
   harmless?: boolean;
+  /** A stage-end cannon: the stage is clear once every one is destroyed. */
+  cannon?: boolean;
+  /** Hovers: flies over cliffs and the void, and doesn't block the player. */
+  hover?: boolean;
+  /**
+   * Flies high overhead: regular shots pass beneath it, and each nuke that bursts
+   * on it deals one hit (or destroys it outright in its centre hole).
+   */
+  airborne?: boolean;
+  /** Hidden ones rise out of the water rather than from a hole in the ground. */
+  emergeFrom?: 'hole' | 'water';
 }
 
 export const ENEMIES: Record<EnemyKind, EnemySpec> = {
@@ -68,6 +98,20 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
     preferredRange: 70,
     fire: { kind: 'aimed', projectile: 'orange', count: 1, spacing: 0 },
     fireInterval: 2.2,
+    fireRange: 170,
+    wakeRadius: 170,
+    leavesCrater: true,
+    large: false,
+  },
+  type1a: {
+    hits: [3, 4],
+    points: 100,
+    radius: 7,
+    speed: 30,
+    turnRate: 2.2,
+    preferredRange: 70,
+    fire: { kind: 'aimed', projectile: 'orange', count: 1, spacing: 0 },
+    fireInterval: 2.0,
     fireRange: 170,
     wakeRadius: 170,
     leavesCrater: true,
@@ -100,6 +144,108 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
     wakeRadius: 175,
     leavesCrater: true,
     large: false,
+  },
+  type4: {
+    hits: [12, 12],
+    points: 1000,
+    radius: 10,
+    speed: 26,
+    turnRate: 2,
+    preferredRange: 80,
+    fire: { kind: 'aimed', projectile: 'pink', count: 1, spacing: 0 },
+    fireInterval: 1.8,
+    fireRange: 190,
+    wakeRadius: 400,
+    leavesCrater: true,
+    large: false,
+    emergeFrom: 'water',
+  },
+  type6: {
+    hits: [16, 48],
+    points: 1500,
+    radius: 15,
+    speed: 18,
+    turnRate: 1.1,
+    preferredRange: 105,
+    fire: { kind: 'aimed', projectile: 'pink', count: 2, spacing: 10 },
+    fireInterval: 2.2,
+    fireRange: 200,
+    wakeRadius: 190,
+    leavesCrater: true,
+    large: true,
+  },
+  type7a: {
+    hits: [16, 48],
+    points: 2500,
+    radius: 16,
+    speed: 16,
+    turnRate: 1,
+    preferredRange: 115,
+    fire: { kind: 'aimed', projectile: 'missile', count: 2, spacing: 16 },
+    fireInterval: 3.0,
+    fireRange: 210,
+    wakeRadius: 190,
+    leavesCrater: true,
+    large: true,
+  },
+  type7b: {
+    hits: [16, 48],
+    points: 2500,
+    radius: 16,
+    speed: 16,
+    turnRate: 1,
+    preferredRange: 105,
+    fire: { kind: 'radial', projectile: 'orange', count: 16 },
+    fireInterval: 3.2,
+    fireRange: 190,
+    wakeRadius: 190,
+    leavesCrater: true,
+    large: true,
+  },
+  scouter: {
+    hits: [1, 1],
+    points: 500,
+    radius: 7,
+    speed: 58,
+    turnRate: 3.2,
+    preferredRange: 60,
+    fire: { kind: 'aimed', projectile: 'orange', count: 1, spacing: 0 },
+    fireInterval: 1.6,
+    fireRange: 170,
+    wakeRadius: 180,
+    leavesCrater: true,
+    large: false,
+  },
+  fourlegs: {
+    hits: [1, 1],
+    points: 200,
+    radius: 7,
+    speed: 40,
+    turnRate: 2.6,
+    preferredRange: 75,
+    fire: { kind: 'aimed', projectile: 'missile', count: 1, spacing: 0 },
+    fireInterval: 2.6,
+    fireRange: 190,
+    wakeRadius: 190,
+    leavesCrater: false,
+    large: false,
+    hover: true,
+  },
+  generator: {
+    hits: [8, 8],
+    points: 5000,
+    radius: 30,
+    speed: 22,
+    turnRate: 3,
+    preferredRange: 40,
+    fire: { kind: 'aimed', projectile: 'missile', count: 2, spacing: 30 },
+    fireInterval: 2.4,
+    fireRange: 220,
+    wakeRadius: 220,
+    leavesCrater: false,
+    large: true,
+    hover: true,
+    airborne: true,
   },
   type5: {
     hits: [8, 30],
@@ -156,6 +302,37 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
     wakeRadius: 210,
     leavesCrater: false,
     large: true,
+    cannon: true,
+  },
+  cannon2: {
+    hits: [20, 20],
+    points: 1200,
+    radius: 21,
+    speed: 0,
+    turnRate: 0.9,
+    preferredRange: 0,
+    fire: { kind: 'aimed', projectile: 'pink', count: 4, spacing: 6 },
+    fireInterval: 1.8,
+    fireRange: 210,
+    wakeRadius: 210,
+    leavesCrater: false,
+    large: true,
+    cannon: true,
+  },
+  cannon3: {
+    hits: [32, 32],
+    points: 1200,
+    radius: 22,
+    speed: 0,
+    turnRate: 1,
+    preferredRange: 0,
+    fire: { kind: 'aimed', projectile: 'pink', count: 3, spacing: 8 },
+    fireInterval: 1.4,
+    fireRange: 220,
+    wakeRadius: 220,
+    leavesCrater: false,
+    large: true,
+    cannon: true,
   },
   ufo: {
     hits: [1, 1],

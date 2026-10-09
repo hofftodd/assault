@@ -224,3 +224,80 @@ Key mechanics:
 For personal or nostalgic use. All art and sound are original; we take the
 mechanics and stage scripts from public guides. Use a distinct title if it's ever
 shared publicly.
+
+## Findings from Todd's gameplay frames (2,738 frames, full 1-credit clear)
+The video shows the **Japanese** version: there's a Japan-only notice at boot,
+death reads "PLAYER 1UP / MISSED", and running out of time reads "PLAYER 1UP /
+TIME UP". Key frames are saved in `reference/video/`.
+
+**HUD**
+- "1UPSCORE" sits at the left, "TIME" in the centre and "TOPSCORE" at the right.
+- TIME only appears once fewer than 100 seconds remain.
+- The timer number flashes red at 60 and 30 seconds, and stays red near the
+  end. Spare lives show as tank icons at the bottom left.
+
+**Stage flow**
+1. The stage opens with "PLAYER / 1 / READY".
+2. Destroying the end cannons shows "PLAYER 1UP / STAGE nn CLEAR", then
+   "TIME BONUS! ss*50 POINTS = n POINTS".
+3. The tank drives into the exit hatch. Chevrons scroll and clamps close
+   on the tank. "NOW YOU ASSAULT ON NEXT STAGE!!" appears.
+4. The iris opens and the tank drops through.
+5. A black starfield follows, then the camera zooms in from high above onto
+   the next continent, then READY.
+
+Inside an area, the next stage can also start right where the last one
+ended.
+
+**Exit guide**
+A yellow arrow in a dark round badge sits mid-screen and points the way.
+
+**Nuke aiming**
+- The reticle is a small ring with four dots around it.
+- It's red in the captured frames, which fits Todd's memory: white while it
+  extends, red at full range.
+
+**Nuke impact**
+- The screen dims.
+- A thin white shockwave ring sweeps out over the blast area, then fades
+  through a dotted ring.
+- Destroying a large enemy flashes the whole screen white for one frame.
+
+**Raised on a jump zone**
+- The camera zooms well out and the whole region becomes visible.
+- Every enemy in view comes awake and swarms.
+- Several red reticles mark the targets.
+
+**Jump zones**
+- They're pentagonal pads with red triangle markers.
+- They glow red while usable and go dark or black once used up.
+
+**Terrain and set dressing by area**
+- **Area 1:** olive desert, cliffs, rocky "rough" patches.
+- **Area 2:** green ponds, forests, crop fields.
+- **Area 3:** teal winding rivers, darker grass bands, hedge mazes, paved
+  roads, sandy pits that open into UFO-launcher holes.
+- **Area 4:**
+  - grey city grids with domes, tanks and pyramid roofs
+  - orange fuel cylinders
+  - red/black triangle "arrow" floors
+  - the brick-red walled compounds of the final stages
+  - a giant "namco" lettered into the floor in stage 8
+
+**Enemies seen**
+- **Light tanks:** rust, blue and grey.
+- **Fourlegs:** pale-cyan hovering walkers that cast black shadows.
+- **Type 4:** rises out of the rivers.
+- **Big tanks:** large pink/rust tanks firing pink orb spreads.
+- **Generators:** the red Generator hovers over the end of stage 4 and flashes
+  pink when nuked.
+- **Grey turret clusters:** the city levels have them.
+- **Cannons:** stage-end cannon batteries on grey concrete aprons.
+
+**Ending**
+1. "CONGRATULATIONS! YOU REGAIN YOUR MOTHER PLANET AND ETERNAL PEACE!"
+2. A NATIVE DEFENCE FORCE HIGH-MANEUVER BATTLE TANK spec sheet (top and side
+   views, engine and weapons data).
+3. Credits over each area's map silhouette.
+4. "THE END / MANY THANKS FOR YOUR PLAY!"
+5. High-score entry.

@@ -1,0 +1,26 @@
+{
+  "name": "assault-remake",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A fan remake of Namco's 1988 arcade tank shooter Assault",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "smoke": "vite build && node scripts/smoke.mjs",
+    "art": "node scripts/preview-art.mjs",
+    "music": "node scripts/render-music.mjs"
+  },
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.0",
+    "vitest": "5.0.1"
+  }
+}

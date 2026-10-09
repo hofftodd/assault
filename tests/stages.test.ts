@@ -3,7 +3,7 @@ import { ENEMIES } from '../src/sim/enemies';
 import { Material, TileTerrain } from '../src/sim/terrain';
 import { STAGES } from '../src/stages/stages';
 
-const OPEN: Material[] = [Material.Ground, Material.Rough, Material.Concrete];
+const OPEN: Material[] = [Material.Ground, Material.Rough, Material.Concrete, Material.Deck];
 /** Tiles a tank can drive over (crops slow it down). */
 const DRIVABLE: Material[] = [...OPEN, Material.Crop];
 

@@ -7,7 +7,8 @@ majority colour: black = void, grey = cliff, olive = ground, speckled grey on
 olive = rough, teal = water, dark green = crops, blue-grey = concrete.
 UPSCALE enlarges the image first (for maps drawn at a smaller scale), and SMOOTH
 runs that many majority-filter passes over the land tiles to tidy speckle.
-PALETTE 'area3' reads the darker area 3 map ('h' marks hedges).
+PALETTE 'area3' reads the darker area 3 map ('h' marks hedges); 'area4' reads the
+base rooms' deck ('d') and machinery ('m').
 Markers (jump zones, enemies, the hatch) are placed separately in stages.ts.
 """
 import sys
@@ -50,7 +51,20 @@ def pixel_class_area3(r, g, b):
     return '.'
 
 
-PALETTES = {'default': pixel_class, 'area3': pixel_class_area3}
+def pixel_class_area4(r, g, b):
+    """Area 4's base rooms: the deck, and machinery (pale steel, orange tanks, pink housings) on it."""
+    if max(r, g, b) < 30:
+        return ' '
+    if max(r, g, b) >= 125 and abs(r - g) < 26 and abs(g - b) < 26:
+        return 'm'
+    if r > 150 and g < 130 and b < 90:
+        return 'm'
+    if r > 120 and b > 90 and r - g > 25:
+        return 'm'
+    return 'd'
+
+
+PALETTES = {'default': pixel_class, 'area3': pixel_class_area3, 'area4': pixel_class_area4}
 
 
 def main():
@@ -72,6 +86,11 @@ def main():
             )
             ch, n = counts.most_common(1)[0]
             total = cell * cell
+            # Machinery is outlined in dark lines: a solid share of steel marks a block.
+            if counts['m'] >= total * 0.4:
+                ch = 'm'
+            elif ch == 'm':
+                ch = 'd'
             # Speckled rough ground: olive with plenty of grey flecks.
             if ch in '.,' and counts[','] >= total * 0.2 and counts['.'] + counts[','] >= total * 0.7:
                 ch = ','

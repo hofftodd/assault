@@ -1,6 +1,7 @@
 import type { EnemyKind, Spawn } from '../sim/enemies';
 import type { ExitKind } from '../sim/world';
 import { stage3, stage4, stage5 } from './area3';
+import { stage11, stage6, stage7, stage8, stage9 } from './area4';
 import { MapCarver } from './carve';
 import { STAGE01_TERRAIN } from './stage01Map';
 import { STAGE02_TERRAIN } from './stage02Map';
@@ -168,4 +169,8 @@ function stage2(): StageDef {
   };
 }
 
-export const STAGES: StageDef[] = [stage1(), stage2(), stage3(), stage4(), stage5()];
+/** Every stage built so far, in play order (stage 10 is still to come). */
+export const STAGES: StageDef[] = [stage1(), stage2(), stage3(), stage4(), stage5(), stage6(), stage7(), stage8(), stage9(), stage11()];
+
+/** The play-order index of stage `n` (?stage=N on the URL), or -1. */
+export const stageIndexOf = (n: number): number => STAGES.findIndex((s) => s.number === n);

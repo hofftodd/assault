@@ -72,6 +72,29 @@ const CONCRETE: RGB[] = [
   [120, 120, 134],
 ];
 
+/** Area 4's deck plating, and the machinery standing on it. */
+const DECK: RGB[] = [
+  [52, 40, 40],
+  [66, 52, 52],
+  [78, 63, 62],
+  [88, 72, 70],
+  [104, 88, 84],
+];
+const STEELWORK: RGB[] = [
+  [44, 46, 54],
+  [70, 72, 82],
+  [104, 106, 116],
+  [136, 138, 146],
+  [170, 172, 178],
+  [210, 212, 216],
+];
+const MACHINE_LIGHTS: RGB[] = [
+  [240, 120, 40],
+  [230, 90, 110],
+  [90, 150, 240],
+  [150, 210, 90],
+];
+
 /**
  * Paint a stage's terrain. The texture has `k` pixels per world pixel: every
  * pixel samples the terrain and the noise at its own (sub-world-pixel) position,
@@ -147,7 +170,14 @@ export function renderTerrain(t: TileTerrain, k = ART_SCALE): Rgba {
     lmat,
     lw,
     lh,
-    (m) => m === Material.Ground || m === Material.Rough || m === Material.Concrete || m === Material.Crop || m === Material.Water,
+    (m) =>
+      m === Material.Ground ||
+      m === Material.Rough ||
+      m === Material.Concrete ||
+      m === Material.Crop ||
+      m === Material.Water ||
+      m === Material.Deck ||
+      m === Material.Machinery,
   );
   const lLand = distanceField(lmat, lw, lh, (m) => m !== Material.Water);
   const at = (f: Float32Array, X: number, Y: number) => f[Math.min(lh - 1, (Y / k) | 0) * lw + Math.min(lw - 1, (X / k) | 0)];
@@ -225,6 +255,44 @@ export function renderTerrain(t: TileTerrain, k = ART_SCALE): Rgba {
           const near = (dx: number, dy: number) => t.tileAt(Math.floor((x + dx) / ts), Math.floor((y + dy) / ts)) === Material.Hedge;
           const edge = !near(-2, 0) || !near(0, -2) ? -0.3 : !near(2, 0) || !near(0, 2) ? 0.3 : 0;
           put(X, Y, pick(MOSS, 0.45 + edge + (sample(leafF, x, y) - 0.5) * 0.8 + (grain - 0.5) * 0.25));
+          break;
+        }
+        case Material.Deck: {
+          // Riveted deck plates, each a slightly different shade, darkened where machinery casts its shadow.
+          const ts = t.tileSize;
+          const tx = Math.floor(x / ts);
+          const ty = Math.floor(y / ts);
+          const fx = x - tx * ts;
+          const fy = y - ty * ts;
+          const shadowed = t.tileAt(Math.floor((x + 3) / ts), Math.floor((y + 3) / ts)) === Material.Machinery;
+          const seam = fx < 0.5 || fy < 0.5;
+          const lip = fx > ts - 1 || fy > ts - 1;
+          const rivet = (Math.abs(fx - 3) < 0.6 || Math.abs(fx - ts + 3) < 0.6) && (Math.abs(fy - 3) < 0.6 || Math.abs(fy - ts + 3) < 0.6);
+          let tone = 0.42 + hash2(tx, ty, s + 91) * 0.16 + (grain - 0.5) * 0.12;
+          if (shadowed) tone -= 0.25;
+          put(X, Y, seam ? DECK[0] : lip || rivet ? DECK[shadowed ? 2 : 4] : pick(DECK, tone));
+          break;
+        }
+        case Material.Machinery: {
+          // Raised steel housings: lit faces towards the lower right, shaded towards the upper left,
+          // panel lines, and here and there a coloured lamp or hatch.
+          const ts = t.tileSize;
+          const tx = Math.floor(x / ts);
+          const ty = Math.floor(y / ts);
+          const fx = x - tx * ts;
+          const fy = y - ty * ts;
+          const solid = (dx: number, dy: number) => t.tileAt(tx + dx, ty + dy) === Material.Machinery;
+          const bevel = 2.5;
+          let tone = 0.55 + (hash2(tx >> 1, ty >> 1, s + 93) - 0.5) * 0.2;
+          if ((!solid(0, -1) && fy < bevel) || (!solid(-1, 0) && fx < bevel)) tone = 0.18;
+          else if ((!solid(0, 1) && fy > ts - bevel) || (!solid(1, 0) && fx > ts - bevel)) tone = 0.9;
+          else if (Math.abs(fx - ts / 2) > 5.5 && Math.abs(fx - ts / 2) < 6.3 && hash2(tx, ty, s + 95) > 0.5) tone -= 0.22;
+          const lamp = hash2(tx, ty, s + 97);
+          if (lamp > 0.8 && Math.hypot(fx - ts / 2, fy - ts / 2) < 2.4) {
+            put(X, Y, MACHINE_LIGHTS[Math.floor(hash2(tx, ty, s + 99) * MACHINE_LIGHTS.length)]);
+            break;
+          }
+          put(X, Y, pick(STEELWORK, tone + (grain - 0.5) * 0.08));
           break;
         }
         case Material.Concrete: {

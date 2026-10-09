@@ -33,7 +33,7 @@ import { LIFE_ICON } from '../art/sprites';
 import { addAnimationStrip, addPixelArt, addPixelFont, addRgbaTexture } from '../art/textures';
 import { Sfx } from '../audio/sfx';
 import { createSession, SESSION_KEY, SFX_KEY } from '../session';
-import { STAGES } from '../stages/stages';
+import { STAGES, stageIndexOf } from '../stages/stages';
 import { TEST_MAP } from '../stages/testMap';
 import { requestTerrain } from '../art/terrainCache';
 
@@ -68,6 +68,7 @@ export class BootScene extends Phaser.Scene {
     addRgbaTexture(this, 'scouter', SCOUTER());
     addRgbaTexture(this, 'fourlegs', fourlegsArt());
     addRgbaTexture(this, 'generator', generatorArt());
+    addRgbaTexture(this, 'generator2', generatorArt(true));
     addRgbaTexture(this, 'cannon2', cannon2Art());
     addRgbaTexture(this, 'cannon3', cannon3Art());
     addRgbaTexture(this, 'ufo', ufoArt());
@@ -93,7 +94,7 @@ export class BootScene extends Phaser.Scene {
     // ?play (and the test map) skip the title screen; ?stage=N starts at stage N.
     const params = new URLSearchParams(window.location.search);
     const stage = Number(params.get('stage'));
-    if (stage >= 1 && stage <= STAGES.length) session.stageIndex = stage - 1;
+    if (stageIndexOf(stage) >= 0) session.stageIndex = stageIndexOf(stage);
 
     // Start painting the first stage's terrain while the title screen shows.
     const first = params.get('map') === 'test' ? null : STAGES[session.stageIndex];

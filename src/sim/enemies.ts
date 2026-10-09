@@ -15,6 +15,7 @@ export type EnemyKind =
   | 'scouter'
   | 'fourlegs'
   | 'generator'
+  | 'generator2'
   | 'torchika1'
   | 'torchika2'
   | 'cannon1'
@@ -240,6 +241,23 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
     preferredRange: 40,
     fire: { kind: 'aimed', projectile: 'missile', count: 2, spacing: 30 },
     fireInterval: 2.4,
+    fireRange: 220,
+    wakeRadius: 220,
+    leavesCrater: false,
+    large: true,
+    hover: true,
+    airborne: true,
+  },
+  /** The Black Generator of the final stage: twenty nukes, or one down the centre hole. */
+  generator2: {
+    hits: [20, 20],
+    points: 5000,
+    radius: 30,
+    speed: 22,
+    turnRate: 3,
+    preferredRange: 40,
+    fire: { kind: 'aimed', projectile: 'missile', count: 2, spacing: 30 },
+    fireInterval: 2.0,
     fireRange: 220,
     wakeRadius: 220,
     leavesCrater: false,

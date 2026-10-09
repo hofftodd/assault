@@ -10,8 +10,9 @@ assets, so don't load them from the game or ship them in a build.
 - `stage1_gameplay_224x288.png`: a stage 1 screenshot at native resolution
   (224×288, portrait), from
   [StrategyWiki](https://strategywiki.org/wiki/File:Assault_gameplay.png).
-- `maps/stage01.png`, `maps/stage02.png`, `maps/area3.png`: StrategyWiki's maps of
-  the original stages (area 3 holds stages 3-5 and 10). `scripts/convert-map.py` turns them into the tile rows in `src/stages/`.
+- `maps/stage01.png`, `maps/stage02.png`, `maps/area3.png`, `maps/area4.png`:
+  StrategyWiki's maps of the original stages (area 3 holds stages 3-5 and 10,
+  area 4 stages 6-9 and 11). `scripts/convert-map.py` turns them into the tile rows in `src/stages/`.
 - `control_panel.png`: the cabinet control panel and its lever instruction plate.
 
 The sprite graphics are © Namco.

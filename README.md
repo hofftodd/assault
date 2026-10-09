@@ -125,5 +125,16 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   - the airborne Generator: shells pass beneath it, each nuke is one hit, and a
     nuke down its centre hole destroys it outright;
   - Type 2 and Type 3 cannons.
-- **Next:** area 4, "And Reconstruct Our Ruined Home" (stages 6-9 and 11), then
-  stage 10 on the area 3 map.
+- **Milestone 7 (done):** area 4, "And Reconstruct Our Ruined Home", stages
+  6-9 and 11, in the enemy base's 3x3 grid of walled rooms. The rooms' machinery
+  is converted from StrategyWiki's area map and sits on a riveted metal deck, with
+  the walls, passages and gates built by hand. The stages:
+  - 6, 7 and 8 each clear one room and leave through gates into the next;
+  - 9 runs down the east rooms past four cannon pairs to the exit hatch;
+  - 11 crosses the pillbox fields of the south room and climbs the runway into
+    the centre room, where the Black Generator (20 nukes) waits. Its launch pad
+    ends the war, followed by the closing pages.
+
+  From stage 6 on, enemies take the walkthrough's extra hits.
+- **Next:** stage 10 (the populated return to area 3, between stages 9 and 11).
+  For now, stage 9's hatch leads straight to stage 11.

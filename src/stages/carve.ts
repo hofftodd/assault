@@ -22,7 +22,7 @@ export class MapCarver {
   /** Whether a tile is plain open ground (or rough), free for a unit to stand on. */
   isOpen(tx: number, ty: number): boolean {
     const ch = this.get(tx, ty);
-    return ch === '.' || ch === ',';
+    return ch === '.' || ch === ',' || ch === 'd';
   }
 
   /**

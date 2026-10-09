@@ -29,8 +29,38 @@ const SHADOW_Y = -3;
 
 /** Seconds the GAME OVER banner shows before moving on. */
 const GAME_OVER_HOLD = 4;
-/** Seconds the end-of-content message shows after the last stage. */
+/** Seconds the end-of-content message shows after the last stage built so far. */
 const ENDING_HOLD = 7;
+
+/** The final stage, whose launch ends the war. */
+const FINAL_STAGE = 11;
+
+/** The ending after the final stage: a page at a time, each shown for `hold` seconds. */
+const FINALE: { hold: number; text: string }[] = [
+  { hold: 6, text: 'CONGRATULATIONS!\n\n\nYOU REGAIN\n\nYOUR MOTHER PLANET\n\nAND ETERNAL PEACE!' },
+  {
+    hold: 9,
+    text: [
+      'NATIVE DEFENCE FORCE',
+      'HIGH-MANEUVER BATTLE TANK',
+      '',
+      '<BASIC DATA>',
+      'LENGTH         16.80M',
+      'WIDTH          12.55M',
+      'OVERALL HEIGHT  3.05M',
+      '',
+      '<ENGINE>',
+      'TYPE      VLT-AUSF.2',
+      'POWER       14,400HP',
+      'MAX SPEED    70KM/H',
+      '',
+      '<WEAPONS>',
+      '225MM GUN LAUNCHER *1',
+      '75MM FLAMETHROWER  *1',
+    ].join('\n'),
+  },
+  { hold: 6, text: "A FAN REMAKE OF\n\nNAMCO'S 1988 ASSAULT\n\n\n\nTHE END\n\n\nMANY THANKS\n\nFOR YOUR PLAY!" },
+];
 /** Camera zoom while raised on a jump zone. */
 const RAISED_ZOOM = 0.55;
 
@@ -64,10 +94,10 @@ const enum Depth {
 const CROSSHAIR_MAX_TINT = 0xff3030;
 
 /** Emplacements keep their art upright; vehicles and turrets turn. */
-const FIXED_FACING: Partial<Record<EnemyKind, boolean>> = { torchika1: true, torchika2: true, ufo: true, parking: true, generator: true };
+const FIXED_FACING: Partial<Record<EnemyKind, boolean>> = { torchika1: true, torchika2: true, ufo: true, parking: true, generator: true, generator2: true };
 
 /** How high flying enemies ride above their shadows (shadow offset multiplier). */
-const FLYING_LIFT: Partial<Record<EnemyKind, number>> = { ufo: 1.8, fourlegs: 3, generator: 9 };
+const FLYING_LIFT: Partial<Record<EnemyKind, number>> = { ufo: 1.8, fourlegs: 3, generator: 9, generator2: 9 };
 
 interface EnemyView {
   body: Phaser.GameObjects.Image;
@@ -213,7 +243,7 @@ export class GameScene extends Phaser.Scene {
     if (w.state === 'gameOver' && w.stateTime >= GAME_OVER_HOLD) return this.finishGame();
     if (w.state === 'done') {
       if (this.endingTime < 0) this.stageDone();
-      else if ((this.endingTime += delta / 1000) >= ENDING_HOLD) return this.finishGame();
+      else if ((this.endingTime += delta / 1000) >= this.endingLength()) return this.finishGame();
     }
 
     this.updateHud();
@@ -237,6 +267,21 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.endingTime = 0;
+    // The war is won: the field fades to black behind the closing pages.
+    if (this.stage.number === FINAL_STAGE) this.time.delayedCall(2100, () => this.cameras.main.fadeOut(1200, 0, 0, 0));
+  }
+
+  private endingLength(): number {
+    return this.stage.number === FINAL_STAGE ? FINALE.reduce((t, p) => t + p.hold, 0) : ENDING_HOLD;
+  }
+
+  /** The closing page showing `t` seconds into the ending. */
+  private finalePage(t: number): string {
+    for (const p of FINALE) {
+      if (t < p.hold) return p.text;
+      t -= p.hold;
+    }
+    return '';
   }
 
   /** Leave the game: high-score entry if the score made the table, otherwise the title screen. */
@@ -269,9 +314,14 @@ export class GameScene extends Phaser.Scene {
             : `TIME BONUS!\n\n${w.bonus.seconds}*50 POINTS\n\n= ${Math.max(0, w.bonus.points)} POINTS`;
         break;
       case 'exiting':
-        s.message = w.exit === 'gate' ? null : 'NOW YOU ASSAULT ON\n\nNEXT STAGE!!';
+        s.message =
+          w.exit === 'gate' ? null : this.stage.number === FINAL_STAGE ? 'CONGRATULATIONS!' : 'NOW YOU ASSAULT ON\n\nNEXT STAGE!!';
         break;
       case 'done':
+        if (this.stage.number === FINAL_STAGE) {
+          s.message = this.finalePage(Math.max(0, this.endingTime));
+          break;
+        }
         s.message = `CONGRATULATIONS!\n\nSTAGE ${pad2(this.stage.number)} IS YOURS.\n\n\nMORE STAGES ARE\n\nON THE WAY...`;
         break;
       case 'gameOver':
@@ -540,8 +590,8 @@ export class GameScene extends Phaser.Scene {
       if (e.state === 'hidden') continue;
       alive.add(e.id);
       const v = this.enemyViews.get(e.id) ?? this.addEnemyView(e);
-      // The generator turns slowly as it hovers.
-      const rot = e.kind === 'generator' ? this.time.now / 3000 : FIXED_FACING[e.kind] ? 0 : e.heading;
+      // Generators turn slowly as they hover.
+      const rot = ENEMIES[e.kind].airborne ? this.time.now / 3000 : FIXED_FACING[e.kind] ? 0 : e.heading;
       // Rising out of its hole: grows from nothing, its shadow drawing away as it lifts.
       const rise = e.state === 'emerging' ? Math.min(1, e.emergeTime / WORLD_TUNING.emergeTime) : 1;
       const lift = FLYING_LIFT[e.kind] ?? 1;

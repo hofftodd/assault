@@ -1,6 +1,6 @@
-import type { EnemyKind, Spawn } from '../sim/enemies';
 import { AREA3_TERRAIN } from './area3Map';
 import { MapCarver } from './carve';
+import { Layout } from './layout';
 import type { StageDef } from './stages';
 
 /**
@@ -42,68 +42,6 @@ function areaMap(seed: number): MapCarver {
   return c;
 }
 
-interface Crop {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-/** Helpers for laying out one stage on the area map, in area tiles. */
-class Layout {
-  readonly c: MapCarver;
-  readonly spawns: Spawn[] = [];
-  private readonly taken: [number, number][] = [];
-  private wave = 0;
-
-  constructor(
-    seed: number,
-    private readonly crop: Crop,
-  ) {
-    this.c = areaMap(seed);
-  }
-
-  /** A group of enemies scattered around a point; returns its wave number. */
-  group(cx: number, cy: number, r: number, units: [EnemyKind, number][], after?: number): number {
-    const group = ++this.wave;
-    for (const [kind, n] of units) {
-      for (const [tx, ty] of this.c.scatter(cx, cy, n, r, this.taken)) this.spawns.push({ kind, tx, ty, group, after, facing: 180 });
-    }
-    return group;
-  }
-
-  /** UFO launchers in holes that open once wave `after` is gone. */
-  ufos(cx: number, cy: number, r: number, n: number, after: number): void {
-    for (const [tx, ty] of this.c.scatter(cx, cy, n, r, this.taken, 3)) this.spawns.push({ kind: 'ufo', tx, ty, after });
-  }
-
-  /** Keep spawns off a tile (a start pad or a jump zone). */
-  reserve(tx: number, ty: number): this {
-    this.taken.push([tx, ty]);
-    return this;
-  }
-
-  /** The stage's map, spawns and route, shifted into its crop. */
-  finish(def: Omit<StageDef, 'map' | 'spawns' | 'guide'>, guide: [number, number][]): StageDef {
-    const { x, y, w, h } = this.crop;
-    const map = this.c.toRows().slice(y, y + h).map((r) => r.slice(x, x + w));
-    const spawns = this.spawns.map((s) => ({ ...s, tx: s.tx - x, ty: s.ty - y }));
-    return { ...def, map, spawns, guide: guide.map((p) => this.snap(p)).map(([gx, gy]) => [gx - x, gy - y]) };
-  }
-
-  /** The nearest drivable tile to a route point (the converted map's edges are rough). */
-  private snap([px, py]: [number, number]): [number, number] {
-    for (let r = 0; r <= 8; r++) {
-      for (let dy = -r; dy <= r; dy++) {
-        for (let dx = -r; dx <= r; dx++) {
-          if (Math.max(Math.abs(dx), Math.abs(dy)) === r && '.,=f'.includes(this.c.get(px + dx, py + dy))) return [px + dx, py + dy];
-        }
-      }
-    }
-    return [px, py];
-  }
-}
-
 /**
  * Stage 3: the tank lands at the foot of the eastern lobe, facing the cliff. Left, up
  * the lobe past seven Type 3s; left again along the top past Type 1s and two
@@ -111,7 +49,7 @@ class Layout {
  * cannons and a Type 2 cannon in front of the gates. 1:50 on the clock.
  */
 export function stage3(): StageDef {
-  const L = new Layout(33, { x: 84, y: 34, w: 56, h: 66 });
+  const L = new Layout(areaMap(33), { x: 84, y: 34, w: 56, h: 66 });
   const c = L.c;
   const b = BATTERY3;
   c.rect(b.x, b.gateY, b.w, 2, 'G');
@@ -143,7 +81,7 @@ export function stage3(): StageDef {
  * Generator, then north to the seven Type 1 cannons before the next gates. 2:10.
  */
 export function stage4(): StageDef {
-  const L = new Layout(44, { x: 46, y: 84, w: 82, h: 54 });
+  const L = new Layout(areaMap(44), { x: 46, y: 84, w: 82, h: 54 });
   const c = L.c;
   const b = BATTERY4;
   c.rect(b.x, b.gateY, b.w, 2, 'G');
@@ -179,7 +117,7 @@ export function stage4(): StageDef {
  * hedge rows to six Type 1 cannons and a Type 3, and the launch pad beyond. 6:00.
  */
 export function stage5(): StageDef {
-  const L = new Layout(55, { x: 0, y: 0, w: 92, h: 175 });
+  const L = new Layout(areaMap(55), { x: 0, y: 0, w: 92, h: 175 });
   const c = L.c;
   const b = BATTERY5;
   c.rect(b.gateX, b.y, 2, b.h, 'G');

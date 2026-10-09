@@ -333,6 +333,58 @@ try {
   check(await page.evaluate(() => window.__assault.world.state === 'done'), 'stage 5 ends with the tank launched off the pad');
   await shot('27-after-stage5');
 
+  // Phase 6: area 4, the enemy base. Stage 6 starts the hard stages; stage 11 ends the war.
+  await page.goto('http://localhost:4173/?play&stage=6');
+  await page.waitForFunction(() => window.__assault?.stage === 6 && window.__assault.world.state === 'playing', null, { timeout: 30000 }).catch(() => {});
+  const s6 = await page.evaluate(() => {
+    const w = window.__assault.world;
+    return { time: w.timeLeft, gate: !!w.terrain.gate, cannons: w.enemies.filter((e) => e.kind === 'cannon3').length, ufos: w.enemies.filter((e) => e.kind === 'ufo').length };
+  });
+  check(s6.time > 205 && s6.gate && s6.cannons === 2 && s6.ufos === 8, `stage 6: 3:30 clock, gates, two Type 3 cannons, eight buried launchers (${JSON.stringify(s6)})`);
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.invulnerable = 1e9;
+    Object.assign(w.tank, { y: w.tank.y - 200 });
+  });
+  await page.waitForTimeout(1500);
+  await shot('28-stage6-base');
+
+  await page.goto('http://localhost:4173/?play&stage=11');
+  await page.waitForFunction(() => window.__assault?.stage === 11 && window.__assault.world.state === 'playing', null, { timeout: 30000 }).catch(() => {});
+  const s11 = await page.evaluate(() => {
+    const w = window.__assault.world;
+    const n = (k) => w.enemies.filter((e) => e.kind === k).length;
+    return { time: w.timeLeft, cannons: n('cannon3'), parking: n('parking'), torchikas: n('torchika1'), sixteen: n('type7b'), black: n('generator2'), exit: w.exit };
+  });
+  check(
+    s11.time > 265 && s11.cannons === 16 && s11.parking === 108 && s11.torchikas >= 90 && s11.sixteen === 10 && s11.black === 1 && s11.exit === 'launch',
+    `stage 11: 4:30, sixteen Type 3 cannons, 108 parked tanks, pillboxes, ten Type 7-Bs and the Black Generator (${JSON.stringify(s11)})`,
+  );
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    w.invulnerable = 1e9;
+    Object.assign(w.tank, { x: w.tank.x - 120, y: w.tank.y - 90, heading: -Math.PI / 2 });
+  });
+  await page.waitForTimeout(1500);
+  await shot('29-stage11-pillboxes');
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    const g = w.enemies.find((e) => e.kind === 'generator2');
+    Object.assign(w.tank, { x: g.x, y: g.y + 80, heading: 0 });
+  });
+  await page.waitForTimeout(1500);
+  await shot('30-black-generator');
+  await page.evaluate(() => {
+    const w = window.__assault.world;
+    for (let i = w.enemies.length - 1; i >= 0; i--) if (w.enemies[i].kind.startsWith('cannon')) w.enemies.splice(i, 1);
+  });
+  await page.waitForFunction(() => window.__assault.world.state === 'done', null, { timeout: 25000 }).catch(() => {});
+  await page.waitForTimeout(3000);
+  await shot('31-ending');
+  check(await page.evaluate(() => window.__assault.world.state === 'done'), 'clearing stage 11 launches the tank and rolls the ending');
+  await page.waitForTimeout(6500);
+  await shot('32-spec-sheet');
+
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.join(' | ') : ''}`);
 } finally {
   await browser.close();

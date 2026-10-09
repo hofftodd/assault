@@ -147,7 +147,7 @@ export const TYPE3_TANK = (): Rgba =>
 
 /** A tank left parked in the fields: long hull, turret turned aside, no crew. */
 export const PARKING_TANK = (): Rgba =>
-  tankArt({ w: 16, h: 22, treadW: 4, barrelLen: 2, barrels: [-3], barrelW: 2, turretR: 4, hull: RUST, tread: GREY_TREAD, turret: RUST.slice(1), barrel: RUST[5] });
+  tankArt({ w: 16, h: 22, treadW: 4, barrelLen: 2, barrels: [-3], barrelW: 2, turretR: 4, hull: JADE, tread: GREY_TREAD, turret: JADE.slice(2), barrel: RED[2] });
 
 const UFO_WHITE: RGB[] = [[90, 110, 100], [130, 160, 146], [170, 200, 186], [205, 228, 216], [235, 248, 240]];
 const UFO_GREEN: RGB[] = [[20, 70, 50], [30, 110, 70], [50, 150, 90], [90, 200, 130]];
@@ -197,6 +197,7 @@ const TAN: RGB[] = [[96, 74, 52], [130, 102, 74], [162, 132, 100], [192, 162, 12
 const GOLD: RGB[] = [[100, 64, 8], [150, 100, 10], [196, 140, 20], [230, 180, 40], [250, 214, 90], [255, 240, 160]];
 const TEAL: RGB[] = [[30, 60, 64], [50, 90, 96], [80, 130, 134], [120, 170, 170], [170, 210, 206], [220, 240, 236]];
 const GEN_RED: RGB[] = [[90, 24, 24], [136, 40, 36], [176, 64, 56], [208, 92, 80], [232, 128, 112], [250, 170, 150]];
+const GEN_BLACK: RGB[] = [[28, 28, 32], [44, 44, 50], [62, 62, 70], [84, 84, 92], [110, 110, 118], [140, 140, 148]];
 const LAVENDER: RGB[] = [[60, 60, 110], [90, 90, 150], [120, 120, 190], [160, 160, 220], [200, 200, 245]];
 
 /** Armoured Type 1: the light tank with bolted-on grey plates over its hull and treads. */
@@ -328,19 +329,21 @@ export function fourlegsArt(): Rgba {
  * Generator: a huge three-armed flying fortress. Pods with portholes on each arm,
  * missile tubes, and the black centre hole a lucky nuke can drop straight into.
  */
-export function generatorArt(): Rgba {
+export function generatorArt(black = false): Rgba {
+  const body = black ? GEN_BLACK : GEN_RED;
+  const pods = black ? ORANGE : LAVENDER;
   const size = 76;
   const c = (size - 1) / 2;
   const p = new Painter(size, size);
   const arm = (a: number) => {
     const at = (r: number, da = 0): [number, number] => [c + Math.sin(a + da) * r, c - Math.cos(a + da) * r];
     p.polygon([at(8, -1.1), at(31, -0.3), at(34, 0), at(31, 0.3), at(8, 1.1)], (x, y) =>
-      shade(GEN_RED, 0.45 + ((x - c) + (y - c)) / 90 + (hash2(x | 0, y | 0, 7) - 0.5) * 0.1),
+      shade(body, 0.45 + ((x - c) + (y - c)) / 90 + (hash2(x | 0, y | 0, 7) - 0.5) * 0.1),
     );
     const [px, py] = at(24);
     p.disc(px, py, 7, PALE);
-    p.disc(px, py, 4.5, LAVENDER);
-    for (let i = -1; i <= 1; i++) p.rect(Math.round(px - 3), Math.round(py + i * 1.6), 6, 1, LAVENDER[4]);
+    p.disc(px, py, 4.5, pods);
+    for (let i = -1; i <= 1; i++) p.rect(Math.round(px - 3), Math.round(py + i * 1.6), 6, 1, pods[pods.length - 1]);
   };
   for (const a of [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3]) arm(a);
   // Missile tubes between the arms.
@@ -350,7 +353,7 @@ export function generatorArt(): Rgba {
     p.disc(x, y, 4, GREY_TREAD.slice(1));
     p.disc(x, y, 2, RED);
   }
-  p.disc(c, c, 13, GEN_RED);
+  p.disc(c, c, 13, body);
   p.disc(c, c, 9, GREY_TREAD.slice(0, 2));
   p.disc(c, c, 6.5, [[4, 10, 6], [8, 20, 12]]);
   p.outline();

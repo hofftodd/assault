@@ -6,7 +6,7 @@ import type { Sfx } from '../audio/sfx';
 import { RANK_LABELS } from '../highScores';
 import { DEFAULT_BINDINGS } from '../input/bindings';
 import { newGame, SESSION_KEY, SFX_KEY, type Session } from '../session';
-import { STAGES } from '../stages/stages';
+import { stageIndexOf } from '../stages/stages';
 
 /** Seconds each attract page (title, high scores) stays up. */
 const PAGE_TIME = 7;
@@ -146,7 +146,7 @@ export class TitleScene extends Phaser.Scene {
     this.sfx.play('coin');
     // ?stage=N on the URL starts each credit at stage N (for testing).
     const stage = Number(new URLSearchParams(window.location.search).get('stage'));
-    newGame(this.session, stage >= 1 && stage <= STAGES.length ? stage - 1 : 0);
+    newGame(this.session, Math.max(0, stageIndexOf(stage)));
     this.cameras.main.fadeOut(300);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       this.scene.start('game');

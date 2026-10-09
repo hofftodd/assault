@@ -14,6 +14,10 @@ export const Material = {
   Crop: 6,
   /** Clipped hedges (area 3's maze): block tanks and shots, with crisp edges. */
   Hedge: 7,
+  /** Area 4's metal deck: open floor inside the base rooms. */
+  Deck: 8,
+  /** Machinery on the deck: blocks tanks and shots. */
+  Machinery: 9,
 } as const;
 export type Material = (typeof Material)[keyof typeof Material];
 
@@ -35,7 +39,7 @@ export interface Terrain {
  * Tile map legend (one character per tile):
  *   ' ' void   '#' rock   '.' ground   ',' rough ground   '=' concrete   '~' water   'f' crops
  *   'b' bush   'o' boulder   'P' player start   'J' jump zone   (all on ground)
- *   'h' hedge   'H' exit hatch, or where the tank drives to after the gates open (on concrete)
+ *   'd' metal deck   'm' machinery   'h' hedge   'H' exit hatch, or where the tank drives to after the gates open (on concrete)
  *   'G' exit gate (concrete, closed until the stage is cleared)   'X' where the tank drives to through the gates (ground)
  *   Enemies on ground: '1' Type 1   '2' Type 2   '5' Type 5   'a' 4-way Torchika   'A' 8-way Torchika
  *   'C' Type 1 cannon (on concrete)
@@ -57,6 +61,8 @@ const LEGEND: Record<string, Material> = {
   G: Material.Concrete,
   X: Material.Ground,
   h: Material.Hedge,
+  d: Material.Deck,
+  m: Material.Machinery,
   '1': Material.Ground,
   '2': Material.Ground,
   '5': Material.Ground,
@@ -73,6 +79,9 @@ const ENEMY_CHARS: Record<string, EnemyKind> = {
   A: 'torchika2',
   C: 'cannon1',
 };
+
+/** Man-made tiles keep crisp, straight edges. */
+const CRISP = new Set<Material>([Material.Concrete, Material.Hedge, Material.Deck, Material.Machinery]);
 
 /** How far (px) tile boundaries are pushed around so cliffs look natural. */
 const JITTER = 9;
@@ -154,15 +163,17 @@ export class TileTerrain implements Terrain {
     const ts = this.tileSize;
     // Paving and hedges keep crisp, straight edges.
     const here = this.tileAt(Math.floor(x / ts), Math.floor(y / ts));
-    if (here === Material.Concrete || here === Material.Hedge) return here;
+    if (CRISP.has(here)) return here;
     const m = this.tileAt(Math.floor((x + jx) / ts), Math.floor((y + jy) / ts));
-    return m === Material.Concrete || m === Material.Hedge ? Material.Ground : m;
+    // Natural edges never spill onto paving: a cliff stays a cliff beside a deck.
+    if (CRISP.has(m)) return here === Material.Rock ? Material.Rock : Material.Ground;
+    return m;
   }
 
   solidAt(x: number, y: number): boolean {
     if (this.gateBlocks(x, y)) return true;
     const m = this.materialAt(x, y);
-    return m === Material.Void || m === Material.Rock || m === Material.Water || m === Material.Hedge;
+    return m === Material.Void || m === Material.Rock || m === Material.Water || m === Material.Hedge || m === Material.Machinery;
   }
 
   private gateBlocks(x: number, y: number): boolean {
@@ -178,6 +189,6 @@ export class TileTerrain implements Terrain {
   /** Cliffs, hedges and closed gates stop shots; they fly on over open ground and the void. */
   blocksShotsAt(x: number, y: number): boolean {
     const m = this.materialAt(x, y);
-    return m === Material.Rock || m === Material.Hedge || this.gateBlocks(x, y);
+    return m === Material.Rock || m === Material.Hedge || m === Material.Machinery || this.gateBlocks(x, y);
   }
 }

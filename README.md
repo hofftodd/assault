@@ -142,4 +142,9 @@ reference/     original screenshots/sprites for drawing reference (not shipped)
   and up the winding north-eastern paths, then take the twelve-cannon battery
   (four each of Types 1, 2 and 3). The launch pad sends you back to the enemy
   base for stage 11.
+- **Balance:** enemy marksmanship ramps up over the stages. In stage 1, aimed
+  shots stray up to about 22° either side, volleys come 60% less often, shells
+  fly at three-quarter speed (but just as far), and missiles turn half as
+  sharply. By stage 11 enemies aim within about 6°, at full rate and speed. The
+  numbers are in `WORLD_TUNING` in `src/sim/world.ts`.
 - **Next:** polish (music, gamepad support, a desktop build).

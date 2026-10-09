@@ -51,6 +51,15 @@ export const WORLD_TUNING = {
   gateOpenTime: 1.4,
   /** A nuke bursting this close to an airborne enemy's centre goes down its centre hole. */
   centreHoleRadius: 7,
+  /**
+   * Enemy marksmanship, from the first stage (difficulty 0) to the last (difficulty 1):
+   * how far aimed shots stray either side (rad), how much longer they wait between
+   * volleys, how fast their shells fly, and how hard missiles steer.
+   */
+  aimSpread: [0.38, 0.1],
+  fireDelay: [1.6, 1.0],
+  shotSpeed: [0.75, 1.0],
+  missileHoming: [0.55, 1.0],
   /** Extra lives (a guess: the original's thresholds are unknown). */
   extendFirst: 20000,
   extendEvery: 70000,
@@ -139,6 +148,11 @@ export interface WorldOptions {
   startHeading?: number;
   /** How the tank leaves once the stage is clear (default: the hatch). */
   exit?: ExitKind;
+  /**
+   * 0 (first stage) to 1 (last): how well enemies shoot (see WORLD_TUNING). Omit
+   * for dead-eye aim at full rate (unit tests).
+   */
+  difficulty?: number;
 }
 
 export class World {
@@ -167,6 +181,8 @@ export class World {
   private onZone: JumpZone | null = null;
   private readonly hasCannons: boolean;
   readonly exit: ExitKind;
+  /** Enemy marksmanship for this stage (see WORLD_TUNING.aimSpread etc). */
+  private readonly skill: { spread: number; delay: number; shotSpeed: number; homing: number };
   /** Exit drive: waypoints still to reach (the gate's mouth, then the hatch). */
   private exitRoute: Point[] = [];
   /** Seconds left before the opening gates let the tank through. */
@@ -193,6 +209,14 @@ export class World {
     this.guide = [...(opts.guide ?? [])];
     this.hasCannons = spawns.some((s) => ENEMIES[s.kind].cannon);
     this.exit = opts.exit ?? 'hatch';
+    const d = opts.difficulty;
+    const lerp = ([a, b]: number[]) => (d === undefined ? b : a + (b - a) * Math.max(0, Math.min(1, d)));
+    this.skill = {
+      spread: d === undefined ? 0 : lerp(WORLD_TUNING.aimSpread),
+      delay: lerp(WORLD_TUNING.fireDelay),
+      shotSpeed: lerp(WORLD_TUNING.shotSpeed),
+      homing: lerp(WORLD_TUNING.missileHoming),
+    };
     this.lives = opts.lives;
     this.hard = opts.hard ?? false;
     this.rng = new Rng(opts.seed ?? 1);
@@ -475,7 +499,7 @@ export class World {
   private wake(e: Enemy): void {
     const spec = ENEMIES[e.kind];
     e.state = 'active';
-    e.fireTimer = spec.fireInterval * this.rng.range(0.3, 1);
+    e.fireTimer = spec.fireInterval * this.skill.delay * this.rng.range(0.3, 1);
   }
 
   private distToPlayer(e: { x: number; y: number }): number {
@@ -531,7 +555,7 @@ export class World {
       if (e.fireTimer > 0) continue;
       if (spec.fire.kind === 'aimed' && Math.abs(angleDiff(e.heading, toPlayer)) > 0.3) continue;
       this.enemyFire(e, toPlayer);
-      e.fireTimer = spec.fireInterval * this.rng.range(0.7, 1.3);
+      e.fireTimer = spec.fireInterval * this.skill.delay * this.rng.range(0.7, 1.3);
     }
   }
 
@@ -565,6 +589,8 @@ export class World {
     if (fire.kind === 'radial') {
       for (let i = 0; i < fire.count; i++) this.spawnProjectile(fire.projectile, e.x, e.y, (i * 2 * Math.PI) / fire.count);
     } else {
+      // The gunner's aim wanders: one error for the whole volley.
+      toPlayer += this.rng.range(-this.skill.spread, this.skill.spread);
       const f = forwardVector(e.heading);
       const r = rightVector(e.heading);
       for (let i = 0; i < fire.count; i++) {
@@ -576,7 +602,8 @@ export class World {
   }
 
   private spawnProjectile(kind: ProjectileKind, x: number, y: number, heading: number): void {
-    this.projectiles.push({ kind, x, y, heading, life: PROJECTILES[kind].life });
+    // Slower shells fly for longer, so they still reach as far.
+    this.projectiles.push({ kind, x, y, heading, life: PROJECTILES[kind].life / this.skill.shotSpeed });
   }
 
   private stepProjectiles(dt: number): void {
@@ -585,10 +612,10 @@ export class World {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i];
       const spec = PROJECTILES[p.kind];
-      if (spec.homing > 0) p.heading += clamp(angleDiff(p.heading, headingTo(p.x, p.y, t.x, t.y)), spec.homing * dt);
+      if (spec.homing > 0) p.heading += clamp(angleDiff(p.heading, headingTo(p.x, p.y, t.x, t.y)), spec.homing * this.skill.homing * dt);
       const f = forwardVector(p.heading);
-      p.x += f.x * spec.speed * dt;
-      p.y += f.y * spec.speed * dt;
+      p.x += f.x * spec.speed * this.skill.shotSpeed * dt;
+      p.y += f.y * spec.speed * this.skill.shotSpeed * dt;
       p.life -= dt;
       if (this.terrain.blocksShotsAt(p.x, p.y)) {
         this.projectiles.splice(i, 1);

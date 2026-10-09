@@ -188,6 +188,8 @@ export class GameScene extends Phaser.Scene {
       guide: st.guide.map(tile),
       startHeading: ((st.startHeading ?? 0) * Math.PI) / 180,
       exit: st.exit,
+      // Enemies shoot better stage by stage (the proving ground plays like the last stage).
+      difficulty: this.testMap ? 1 : this.session.stageIndex / Math.max(1, STAGES.length - 1),
     });
     for (const z of this.world.jumpZones) this.zoneViews.set(z, this.add.image(z.x, z.y, 'jumpZone').setDepth(Depth.Pad).setScale(S));
     this.tankShadow = this.add.image(0, 0, 'tank').setTintFill(0x000000).setAlpha(0.35).setDepth(Depth.Shadow);

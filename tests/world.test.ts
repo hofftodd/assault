@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ENEMIES, type Spawn } from '../src/sim/enemies';
+import { angleDiff, ENEMIES, headingTo, PROJECTILES, type Spawn } from '../src/sim/enemies';
 import { createTank, stepTank } from '../src/sim/tank';
 import { WEAPON_TUNING } from '../src/sim/weapons';
 import { TileTerrain } from '../src/sim/terrain';
@@ -408,5 +408,46 @@ describe('area 3: gates, hovering and airborne enemies', () => {
     const [legs, tank] = w.enemies;
     expect(legs.y).toBeGreaterThan(44 * TILE);
     expect(tank.y).toBeLessThan(38 * TILE);
+  });
+});
+
+describe('enemy marksmanship across the stages', () => {
+  /** Fire a stationary Type 1 at a still player for a while; returns its aim errors (rad). */
+  const volleys = (difficulty?: number) => {
+    const w = new World(field(), [{ kind: 'type1', tx: 50, ty: 45 }], { startReady: false, lives: 3, difficulty, seed: 5 });
+    w.invulnerable = 1e9;
+    const e = w.enemies[0];
+    const errors: number[] = [];
+    for (let i = 0; i < Math.round(60 / DT); i++) {
+      e.x = 50.5 * TILE;
+      e.y = 45.5 * TILE;
+      for (const ev of w.step(DT, 'idle', NO_FIRE)) {
+        if (ev.type !== 'enemyFired') continue;
+        const p = w.projectiles[w.projectiles.length - 1];
+        errors.push(Math.abs(angleDiff(p.heading, headingTo(p.x, p.y, w.tank.x, w.tank.y))));
+      }
+    }
+    return errors;
+  };
+
+  it('early stages scatter their aim and fire less often; late stages aim close', () => {
+    const early = volleys(0);
+    const late = volleys(1);
+    const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
+    expect(mean(early)).toBeGreaterThan(0.12);
+    expect(mean(late)).toBeLessThan(0.08);
+    expect(early.length).toBeLessThan(late.length);
+    expect(Math.max(...early)).toBeLessThanOrEqual(WORLD_TUNING.aimSpread[0] + 0.01);
+  });
+
+  it('early shells fly slower but just as far', () => {
+    const w = new World(field(), [{ kind: 'type1', tx: 50, ty: 45 }], { startReady: false, lives: 3, difficulty: 0 });
+    w.invulnerable = 1e9;
+    while (!w.step(DT, 'idle', NO_FIRE).some((e) => e.type === 'enemyFired'));
+    const p = w.projectiles[0];
+    expect(p.life).toBeCloseTo(PROJECTILES.orange.life / WORLD_TUNING.shotSpeed[0], 1);
+    const start = { x: p.x, y: p.y };
+    w.step(DT, 'idle', NO_FIRE);
+    expect(Math.hypot(p.x - start.x, p.y - start.y)).toBeCloseTo(PROJECTILES.orange.speed * WORLD_TUNING.shotSpeed[0] * DT, 2);
   });
 });

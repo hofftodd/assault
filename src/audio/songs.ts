@@ -7,7 +7,8 @@
  * Melody tokens (one per eighth note, bars separated by '|' for readability):
  *   'A4' play a note   '-' hold the previous note   '.' rest   'A4/B4' two sixteenths
  * Templates (one character per sixteenth note, cycled bar by bar):
- *   bass  'R' root  'O' root an octave up  'F' fifth  '-' hold  '.' rest
+ *   bass  'R' root  'O' root an octave up  'F' fifth  'T' third  'S' flat second
+ *         'V' flat seventh below  '-' hold  '.' rest
  *   arp   '0' '1' '2' chord tones  '3' root an octave up  '.' rest
  *   drums 'k' kick  's' snare  'h' hat  'x' kick and hat  'c' crash  '.' rest
  */
@@ -42,7 +43,7 @@ export const SONGS: Record<TrackName, Song> = {
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'RRORRRORRRORRROR',
+    bass: 'RRORRFRORRORRSRO',
     arp: '0.1.2.1.0.1.2.1.',
     drums: 'xhhhshhhxhxhshhh',
     sections: {
@@ -58,7 +59,7 @@ export const SONGS: Record<TrackName, Song> = {
     loop: true,
     lead: 'pulse',
     pad: true,
-    bass: 'R.RRR.RRR.RRR.RO',
+    bass: 'RRRORRFRRRORRVRF',
     arp: '0.2.1.2.0.2.1.2.',
     drums: 'xhhhshhhxhhxshhh',
     sections: {
@@ -74,7 +75,7 @@ export const SONGS: Record<TrackName, Song> = {
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'RR.RRO.RRR.RRO.R',
+    bass: 'RROFRROFRROFRRSO',
     arp: '0..1..2.3..2..1.',
     drums: 'xhhhshxhxhhhshxh',
     sections: {
@@ -90,7 +91,7 @@ export const SONGS: Record<TrackName, Song> = {
     loop: true,
     lead: 'pulse',
     pad: true,
-    bass: 'RRRRRRRRRRRRRRRR',
+    bass: 'RRRRORRRRRRRORSR',
     arp: '0123012301230123',
     drums: 'xhxhshxhxhxhshxx',
     sections: {
@@ -105,7 +106,7 @@ export const SONGS: Record<TrackName, Song> = {
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'RORORORORORORORO',
+    bass: 'RORFRORFRORFRSRO',
     arp: '0.1.2.3.2.1.0.1.',
     drums: 'xhhxshhxxhhxshsx',
     sections: {
@@ -130,7 +131,7 @@ export const SONGS: Record<TrackName, Song> = {
     loop: false,
     lead: 'alien',
     pad: true,
-    bass: 'R...O...R...O...',
+    bass: 'RRORRFRORRORRFRO',
     arp: '0.1.2.3.0.1.2.3.',
     drums: 'c.h.s.h.k.h.s.h.',
     sections: { A: { chords: ['Gm', 'Eb', 'F', 'G'], melody: 'G4 - Bb4 - D5 - G5 - | Eb5 - G5 - Bb5 - - - | F5 - A5 - C6 - - - | B5 - - - G5 - - -' } },
@@ -152,7 +153,7 @@ export const SONGS: Record<TrackName, Song> = {
     loop: true,
     lead: 'alien',
     pad: true,
-    bass: 'R-------O-------',
+    bass: 'RRORRRORRRORRROR',
     arp: '0.1.2.1.0.1.2.1.',
     drums: 'k.......s.......',
     sections: {
@@ -256,7 +257,8 @@ export function compile(song: Song): Compiled {
       const low = chordTones(chord, 2);
       const mid = chordTones(chord, 4);
       if (song.bass) layTemplate(song.bass, bar + b, (ch, step, len) => {
-        const n = ch === 'R' ? low[0] : ch === 'O' ? low[0] + 12 : ch === 'F' ? low[2] : ch === 'T' ? low[1] : null;
+        const offset: Record<string, number> = { R: 0, O: 12, F: 7, T: low[1] - low[0], S: 1, V: -2 };
+        const n = ch in offset ? low[0] + offset[ch] : null;
         if (n !== null) notes.push({ part: 'bass', step: start + step, len, freq: midiFreq(n) });
       });
       if (song.arp) layTemplate(song.arp, bar + b, (ch, step, len) => {

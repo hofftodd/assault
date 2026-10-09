@@ -47,8 +47,9 @@ const PATCHES: Record<LeadVoice | 'bass' | 'arp' | 'pad', Patch> = {
   synth: { kind: 'synth', wave: 'sawtooth', detune: 14, cutoff: 5200, cutoffEnd: 2200, resonance: 5, vibrato: 0.007, attack: 0.012, decay: 0.3, sustain: 0.75, release: 0.12, vol: 0.075 },
   pulse: { kind: 'synth', wave: 'square', detune: 18, cutoff: 2200, cutoffEnd: 620, resonance: 9, vibrato: 0.012, attack: 0.01, decay: 0.3, sustain: 0.75, release: 0.15, vol: 0.07 },
   brass: { kind: 'fm', ratio: 1, index: 2.6, indexEnd: 0.9, attack: 0.03, decay: 0.25, sustain: 0.75, release: 0.08, vol: 0.13 },
-  // The driving bass: a growling FM pulse with a sub-octave modulator, every sixteenth.
-  bass: { kind: 'fm', ratio: 0.5, index: 3.6, indexEnd: 0.5, attack: 0.003, decay: 0.1, sustain: 0.55, release: 0.03, vol: 0.26 },
+  // The driving bass riff: a growling FM tone with a sub-octave modulator, held for
+  // nearly the whole sixteenth so the riff runs unbroken.
+  bass: { kind: 'fm', ratio: 0.5, index: 3.6, indexEnd: 0.7, attack: 0.003, decay: 0.12, sustain: 0.8, release: 0.03, vol: 0.28 },
   // Alien chimes: inharmonic FM bells, metallic and cold.
   arp: { kind: 'fm', ratio: 3.73, index: 1.6, indexEnd: 0.1, attack: 0.002, decay: 0.14, sustain: 0.12, release: 0.08, vol: 0.03 },
   // A dark drone under each bar: detuned saws, filtered right down, swelling in slowly.

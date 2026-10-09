@@ -39,6 +39,14 @@ describe('the soundtrack', () => {
     expect(seconds('clear')).toBeLessThan(WORLD_TUNING.clearMessageTime + WORLD_TUNING.bonusMessageTime);
   });
 
+  it('drives every theme with an unbroken sixteenth-note bass riff', () => {
+    for (const name of ['stage1', 'land', 'river', 'base1', 'base2', 'areaClear', 'ending'] as const) {
+      const c = compile(SONGS[name]);
+      const steps = new Set(c.notes.filter((n) => n.part === 'bass').map((n) => n.step));
+      for (let i = 0; i < c.steps; i++) expect(steps.has(i), `${name}: no bass on step ${i}`).toBe(true);
+    }
+  });
+
   it('gives every stage a theme, shared as in the original', () => {
     expect(STAGES.map((s) => stageTrack(s.number))).toEqual(['stage1', 'land', 'river', 'river', 'river', 'land', 'base1', 'base2', 'base2', 'river', 'base2']);
   });

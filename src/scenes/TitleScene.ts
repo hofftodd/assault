@@ -72,10 +72,11 @@ export class TitleScene extends Phaser.Scene {
     scores.setText(String(this.session.topScore));
     last.setText(String(this.session.score));
 
-    this.push = text(112, 278, 'PUSH 1P BUTTON', HUD_PINK);
+    this.push = text(112, 270, 'PUSH 1P BUTTON\n\n(ENTER, 1, SPACE OR CLICK)', HUD_PINK);
 
     window.addEventListener('keydown', this.onKey);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => window.removeEventListener('keydown', this.onKey));
+    this.input.on('pointerdown', () => this.start());
     (window as unknown as { __assault: unknown }).__assault = { game: this.game, scene: 'title' };
   }
 
@@ -95,9 +96,14 @@ export class TitleScene extends Phaser.Scene {
   }
 
   private onKey = (e: KeyboardEvent): void => {
-    const start = [...DEFAULT_BINDINGS.start, ...DEFAULT_BINDINGS.fire].includes(e.code);
-    if (!start || this.starting) return;
+    if (![...DEFAULT_BINDINGS.start, ...DEFAULT_BINDINGS.fire].includes(e.code)) return;
     e.preventDefault();
+    this.start();
+  };
+
+  private start(): void {
+    if (this.starting) return;
+    window.focus();
     this.starting = true;
     this.sfx.play('coin');
     // ?stage=N on the URL starts each credit at stage N (for testing).
@@ -108,5 +114,5 @@ export class TitleScene extends Phaser.Scene {
       this.scene.start('game');
       this.scene.launch('hud');
     });
-  };
+  }
 }

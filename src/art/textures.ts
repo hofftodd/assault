@@ -53,13 +53,20 @@ export function addPixelFont(scene: Phaser.Scene): void {
   );
 }
 
+/**
+ * Pixels each tile overlaps its right and bottom neighbours by. The camera rotates and
+ * zooms, and tile corners get rounded to whole screen pixels; without an overlap a
+ * hairline gap can open along a seam and show the black background through it.
+ */
+const TILE_OVERLAP = 4;
+
 /** Upload a large image as square tiles (some GPUs refuse textures over 4096 px). */
 export function addTiledTexture(scene: Phaser.Scene, key: string, img: Rgba, tile = 1024): { key: string; x: number; y: number }[] {
   const tiles: { key: string; x: number; y: number }[] = [];
   for (let ty = 0; ty < img.height; ty += tile) {
     for (let tx = 0; tx < img.width; tx += tile) {
-      const w = Math.min(tile, img.width - tx);
-      const h = Math.min(tile, img.height - ty);
+      const w = Math.min(tile + TILE_OVERLAP, img.width - tx);
+      const h = Math.min(tile + TILE_OVERLAP, img.height - ty);
       const data = new Uint8ClampedArray(w * h * 4);
       for (let y = 0; y < h; y++) data.set(img.data.subarray(((ty + y) * img.width + tx) * 4, ((ty + y) * img.width + tx + w) * 4), y * w * 4);
       const k = `${key}-${tx}-${ty}`;
